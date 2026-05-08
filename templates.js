@@ -1,14 +1,12 @@
 // ============================================================
 //  🚒 FW Terminplaner – templates.js
 //
-//  Vorlagenverwaltung (lokal, nur Admin):
-//  CRUD, Render, Anwenden, Export/Import.
-//  Abhängigkeiten: config.js, ui.js, events.js (setActiveCategory,
-//  setTimeDisplay, setEventType, getCurrentTplEventType)
+//  Vorlagenverwaltung: CRUD, Render, Anwenden, Export/Import.
+//  Abhängigkeiten: config.js, api.js, github.js, ui.js, events.js
 // ============================================================
 
 /* =========================
-   📚 TEMPLATES – lokal (nur Admin)
+   📚 TEMPLATES
 ========================= */
 
 function openTemplateForm() {
@@ -17,7 +15,7 @@ function openTemplateForm() {
   resetTplForm();
 }
 
-function saveTemplate() {
+async function saveTemplate() {
   const tplIsAllDay = getCurrentTplEventType() === "allday";
   const tpl = {
     title:     document.getElementById("tpl_title").value,
@@ -31,6 +29,11 @@ function saveTemplate() {
     reminder2: document.getElementById("tpl_reminder2").value
   };
 
+  if (!tpl.title.trim()) {
+    showModal({ title: "Fehlende Eingabe", text: "Bitte einen Titel eingeben.", onConfirm: () => {} });
+    return;
+  }
+
   if (editTplIndex !== null) {
     store.templates[editTplIndex] = tpl;
     editTplIndex = null;
@@ -38,8 +41,20 @@ function saveTemplate() {
     store.templates.push(tpl);
   }
 
-  saveTemplates();
-  showScreen("template-list");
+  showLoading(true);
+  const ok = await saveTemplatesToGitHub();
+  showLoading(false);
+
+  if (ok) {
+    showScreen("template-list");
+  } else {
+    // Rollback
+    if (editTplIndex !== null) {
+      store.templates[editTplIndex] = tpl;
+    } else {
+      store.templates.pop();
+    }
+  }
 }
 
 function editTemplate(i) {
@@ -48,14 +63,14 @@ function editTemplate(i) {
 
   showScreen("template-form");
   document.getElementById("tplFormTitle").textContent = "✏️ Vorlage bearbeiten";
-  document.getElementById("tpl_title").value    = t.title;
+  document.getElementById("tpl_title").value          = t.title;
   setTimeDisplay("tpl_start", t.start);
   setTimeDisplay("tpl_end",   t.end);
-  document.getElementById("tpl_desc").value     = t.desc;
-  document.getElementById("tpl_location").value = t.location;
-  document.getElementById("tpl_category").value  = t.category;
-  document.getElementById("tpl_reminder1").value = t.reminder1 || "";
-  document.getElementById("tpl_reminder2").value = t.reminder2 || "";
+  document.getElementById("tpl_desc").value           = t.desc;
+  document.getElementById("tpl_location").value       = t.location;
+  document.getElementById("tpl_category").value       = t.category;
+  document.getElementById("tpl_reminder1").value      = t.reminder1 || "";
+  document.getElementById("tpl_reminder2").value      = t.reminder2 || "";
 
   setTplEventType(t.allday ? "allday" : "normal");
   setActiveCategory("template", t.category);
@@ -65,10 +80,19 @@ function deleteTemplate(i) {
   showModal({
     title: "Vorlage löschen",
     text: "Diese Vorlage wirklich löschen?",
-    onConfirm: () => {
+    onConfirm: async () => {
+      const backup = [...store.templates];
       store.templates.splice(i, 1);
-      saveTemplates();
       renderTemplates();
+
+      showLoading(true);
+      const ok = await saveTemplatesToGitHub();
+      showLoading(false);
+
+      if (!ok) {
+        store.templates = backup;
+        renderTemplates();
+      }
     }
   });
 }
@@ -150,10 +174,10 @@ function applyTemplate(i) {
   }
   document.getElementById("category").value  = t.category;
   document.getElementById("date").value      = "";
-  const dateStartEl = document.getElementById("date_start");
-  if (dateStartEl) dateStartEl.value = "";
-  const dateEndEl = document.getElementById("date_end");
-  if (dateEndEl) dateEndEl.value = "";
+  const dsEl = document.getElementById("date_start");
+  if (dsEl) dsEl.value = "";
+  const deEl = document.getElementById("date_end");
+  if (deEl) deEl.value = "";
   document.getElementById("reminder1").value = t.reminder1 || "";
   document.getElementById("reminder2").value = t.reminder2 || "";
 
@@ -183,8 +207,8 @@ function applyTemplateFromDropdown() {
   }
   document.getElementById("category").value  = t.category;
   document.getElementById("date").value      = "";
-  const dateEndEl = document.getElementById("date_end");
-  if (dateEndEl) dateEndEl.value = "";
+  const deEl = document.getElementById("date_end");
+  if (deEl) deEl.value = "";
   document.getElementById("reminder1").value = t.reminder1 || "";
   document.getElementById("reminder2").value = t.reminder2 || "";
 
@@ -228,79 +252,49 @@ function setTplEventType(type) {
 
 function exportTemplates() {
   if (store.templates.length === 0) {
-    showModal({
-      title: "Keine Vorlagen",
-      text: "Es sind keine Vorlagen vorhanden die exportiert werden könnten.",
-      onConfirm: () => {}
-    });
+    showModal({ title: "Keine Vorlagen", text: "Es sind keine Vorlagen vorhanden.", onConfirm: () => {} });
     return;
   }
 
-  const json     = JSON.stringify(store.templates, null, 2);
-  const blob     = new Blob([json], { type: "application/json" });
-  const url      = URL.createObjectURL(blob);
-  const date     = new Date().toISOString().slice(0, 10);
-  const filename = `fw-vorlagen-${date}.json`;
-
+  const blob = new Blob([JSON.stringify(store.templates, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = filename;
+  a.download = `fw-vorlagen-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
-
   URL.revokeObjectURL(url);
 }
 
 function importTemplates(event) {
   const file = event.target.files[0];
   if (!file) return;
-
-  // Input zurücksetzen damit dieselbe Datei erneut gewählt werden kann
   event.target.value = "";
 
   const reader = new FileReader();
-
   reader.onload = (e) => {
     let imported;
-
-    // JSON parsen
     try {
       imported = JSON.parse(e.target.result);
     } catch {
-      showModal({
-        title: "Ungültige Datei",
-        text: "Die Datei konnte nicht gelesen werden. Bitte wähle eine gültige FW-Vorlagen JSON-Datei.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Ungültige Datei", text: "Die Datei konnte nicht gelesen werden.", onConfirm: () => {} });
       return;
     }
 
     if (!Array.isArray(imported)) {
-      showModal({
-        title: "Ungültiges Format",
-        text: "Die Datei enthält keine gültige Vorlagenliste.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Ungültiges Format", text: "Die Datei enthält keine gültige Vorlagenliste.", onConfirm: () => {} });
       return;
     }
 
-    const valid = imported.filter(t =>
-      t && typeof t === "object" && typeof t.title === "string"
-    );
+    const valid = imported.filter(t => t && typeof t === "object" && typeof t.title === "string");
 
     if (valid.length === 0) {
-      showModal({
-        title: "Keine Vorlagen gefunden",
-        text: "Die Datei enthält keine lesbaren Vorlagen.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Keine Vorlagen gefunden", text: "Die Datei enthält keine lesbaren Vorlagen.", onConfirm: () => {} });
       return;
     }
 
-    // Wenn bereits Vorlagen vorhanden: fragen ob ersetzen oder zusammenführen
     if (store.templates.length > 0) {
       showImportChoiceModal(valid);
     } else {
-      // Keine bestehenden Vorlagen → direkt einspielen
       applyImport(valid, "replace");
     }
   };
@@ -318,10 +312,8 @@ function showImportChoiceModal(imported) {
 
   titleEl.textContent = "Vorlagen importieren";
   textEl.textContent  = `${imported.length} Vorlage(n) gefunden. Bestehende ${store.templates.length} Vorlage(n) ersetzen oder zusammenführen?`;
-
   overlay.classList.remove("hidden");
 
-  // Dritter Button dynamisch hinzufügen (falls noch nicht vorhanden)
   let abortBtn = document.getElementById("modal-abort");
   if (!abortBtn) {
     abortBtn = document.createElement("button");
@@ -329,24 +321,16 @@ function showImportChoiceModal(imported) {
     abortBtn.style.cssText = "flex:1; padding:10px; border:none; border-radius:12px; cursor:pointer; font-weight:bold; background:#eee; color:#333;";
     actions.appendChild(abortBtn);
   }
-  abortBtn.textContent = "Abbrechen";
+  abortBtn.textContent   = "Abbrechen";
   abortBtn.style.display = "block";
 
   confirmBtn.textContent = "Ersetzen";
-  confirmBtn.onclick = () => {
-    resetImportModal();
-    applyImport(imported, "replace");
-  };
+  confirmBtn.onclick = () => { resetImportModal(); applyImport(imported, "replace"); };
 
   cancelBtn.textContent = "Zusammenführen";
-  cancelBtn.onclick = () => {
-    resetImportModal();
-    applyImport(imported, "merge");
-  };
+  cancelBtn.onclick = () => { resetImportModal(); applyImport(imported, "merge"); };
 
-  abortBtn.onclick = () => {
-    resetImportModal();
-  };
+  abortBtn.onclick = () => { resetImportModal(); };
 }
 
 function resetImportModal() {
@@ -357,16 +341,16 @@ function resetImportModal() {
   if (abortBtn) abortBtn.style.display = "none";
 }
 
-function applyImport(imported, mode) {
+async function applyImport(imported, mode) {
+  const backup = [...store.templates];
+
   if (mode === "replace") {
     store.templates = imported;
   } else {
-    // Zusammenführen: doppelte Titel überspringen
     const existingTitles = new Set(store.templates.map(t => t.title));
     const newOnes        = imported.filter(t => !existingTitles.has(t.title));
     store.templates      = [...store.templates, ...newOnes];
-
-    const skipped = imported.length - newOnes.length;
+    const skipped        = imported.length - newOnes.length;
     if (skipped > 0) {
       showModal({
         title: "Import abgeschlossen",
@@ -376,14 +360,22 @@ function applyImport(imported, mode) {
     }
   }
 
-  saveTemplates();
-  renderTemplates();
+  showLoading(true);
+  const ok = await saveTemplatesToGitHub();
+  showLoading(false);
 
-  if (mode === "replace") {
-    showModal({
-      title: "Import abgeschlossen",
-      text: `${imported.length} Vorlage(n) erfolgreich importiert.`,
-      onConfirm: () => {}
-    });
+  if (ok) {
+    renderTemplates();
+    if (mode === "replace") {
+      showModal({
+        title: "Import abgeschlossen",
+        text: `${imported.length} Vorlage(n) erfolgreich importiert.`,
+        onConfirm: () => {}
+      });
+    }
+  } else {
+    // Rollback
+    store.templates = backup;
+    renderTemplates();
   }
 }

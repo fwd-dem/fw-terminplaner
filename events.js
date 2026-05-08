@@ -1,9 +1,9 @@
 // ============================================================
 //  🚒 FW Terminplaner – events.js
 //
-//  Terminverwaltung: Render, CRUD (Create/Read/Update/Delete),
-//  Formular, Filter, Export/Import (JSON).
-//  Abhängigkeiten: config.js, api.js, ui.js, helpers.js, timepicker.js
+//  Terminverwaltung: Render, CRUD, Formular, Filter,
+//  Export/Import (JSON).
+//  Abhängigkeiten: config.js, api.js, github.js, ui.js, timepicker.js
 // ============================================================
 
 /* =========================
@@ -22,16 +22,9 @@ function formatDate(date) {
   return new Date(date).toLocaleDateString("de-DE");
 }
 
-// Datum-Anzeige für Karten: normal / ganztägig / mehrtägig
 function formatEventDate(e) {
   if (!e.allday) return formatDate(e.date);
-
-  // Ganztägig ohne Bis-Datum oder gleiches Datum
-  if (!e.date_end || e.date_end === e.date) {
-    return formatDate(e.date) + " · Ganztägig";
-  }
-
-  // Mehrtägig
+  if (!e.date_end || e.date_end === e.date) return formatDate(e.date) + " · Ganztägig";
   return formatDate(e.date) + " – " + formatDate(e.date_end);
 }
 
@@ -110,7 +103,6 @@ function render() {
   list.style.marginTop = "20px";
 }
 
-/* 🎴 EVENT CARD */
 function createEventCard(e) {
   const card      = document.createElement("div");
   card.className  = "card";
@@ -120,7 +112,7 @@ function createEventCard(e) {
   const textColor = past ? "#888" : "#000";
   const subColor  = past ? "#888" : "#777";
 
-  card.dataset.id         = e.id;   // für Lösch-Animation
+  card.dataset.id         = e.id;
   card.style.background   = bg;
   card.style.marginBottom = "12px";
   card.style.padding      = "16px";
@@ -152,7 +144,7 @@ function createEventCard(e) {
 }
 
 /* =========================
-   📅 EVENTS – CRUD (via API)
+   📅 EVENTS – CRUD
 ========================= */
 
 function saveEvent() {
@@ -161,13 +153,11 @@ function saveEvent() {
   const startEl = document.getElementById("start");
   const endEl   = document.getElementById("end");
 
-  // ── Titel Pflichtfeld ──────────────────────────
   if (!titleEl.value.trim()) {
     showModal({ title: "Fehlende Eingabe", text: "Bitte einen Titel eingeben.", onConfirm: () => {} });
     return;
   }
 
-  // ── Datum Pflichtfeld ──────────────────────────
   const isAllDay  = getCurrentEventType() === "allday";
   const dateValue = isAllDay
     ? (document.getElementById("date_start")?.value || "")
@@ -178,31 +168,20 @@ function saveEvent() {
     return;
   }
 
-  // ── Endzeit vor Startzeit (nur bei normalem Termin) ──
   if (!isAllDay && startEl.value && endEl.value && endEl.value <= startEl.value) {
-    showModal({
-      title: "Ungültige Uhrzeit",
-      text: "Die Endzeit muss nach der Startzeit liegen.",
-      onConfirm: () => {}
-    });
+    showModal({ title: "Ungültige Uhrzeit", text: "Die Endzeit muss nach der Startzeit liegen.", onConfirm: () => {} });
     return;
   }
 
-  // ── Bis-Datum vor Von-Datum (nur bei ganztägig) ──
   if (isAllDay) {
     const dateEnd   = document.getElementById("date_end")?.value || "";
     const dateStart = document.getElementById("date_start")?.value || "";
     if (dateEnd && dateStart && dateEnd < dateStart) {
-      showModal({
-        title: "Ungültiges Datum",
-        text: "Das Bis-Datum muss gleich oder nach dem Von-Datum liegen.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Ungültiges Datum", text: "Das Bis-Datum muss gleich oder nach dem Von-Datum liegen.", onConfirm: () => {} });
       return;
     }
   }
 
-  // ── Datum in der Vergangenheit (Warnung) ───────
   const today     = new Date(); today.setHours(0, 0, 0, 0);
   const inputDate = new Date(dateValue); inputDate.setHours(0, 0, 0, 0);
 
@@ -220,15 +199,14 @@ function saveEvent() {
 
 async function saveEventForce() {
   const isAllDay = getCurrentEventType() === "allday";
-  const dateEnd  = document.getElementById("date_end")?.value || "";
   const dateVal  = isAllDay
     ? (document.getElementById("date_start")?.value || "")
     : document.getElementById("date").value;
 
-  const body = {
+  const eventData = {
     title:     document.getElementById("title").value,
     date:      dateVal,
-    date_end:  isAllDay ? dateEnd : "",
+    date_end:  isAllDay ? (document.getElementById("date_end")?.value || "") : "",
     allday:    isAllDay,
     start:     isAllDay ? "" : document.getElementById("start").value,
     end:       isAllDay ? "" : document.getElementById("end").value,
@@ -239,36 +217,19 @@ async function saveEventForce() {
     reminder2: document.getElementById("reminder2").value
   };
 
-  setSaveButtonState(true);   // 💾 Button sperren während Speichern läuft
+  const ok = await saveEventToGitHub(eventData, editEventIndex);
 
-  try {
-    if (editEventIndex !== null) {
-      // Bearbeiten → PUT
-      const updated = await apiFetch(`/events/${editEventIndex}`, {
-        method: "PUT",
-        body: JSON.stringify(body)
-      });
-      const index = store.events.findIndex(e => e.id === updated.id);
-      if (index !== -1) store.events[index] = updated;
-      editEventIndex = null;
-      document.getElementById("formTitle").textContent = "➕ Termin";
-    } else {
-      // Neu → POST
-      const created = await apiFetch("/events", {
-        method: "POST",
-        body: JSON.stringify(body)
-      });
-      store.events.push(created);
-    }
-
+  if (ok) {
+    editEventIndex = null;
+    document.getElementById("formTitle").textContent = "➕ Termin";
     render();
     showToast();
+    // Datumsfelder zurücksetzen
     document.getElementById("date").value = "";
-
-  } catch {
-    // Fehler schon im Modal angezeigt
-  } finally {
-    setSaveButtonState(false);  // Button immer wieder freigeben
+    const dsEl = document.getElementById("date_start");
+    if (dsEl) dsEl.value = "";
+    const deEl = document.getElementById("date_end");
+    if (deEl) deEl.value = "";
   }
 }
 
@@ -283,22 +244,22 @@ function editEvent(id) {
   document.getElementById("title").value    = e.title;
   document.getElementById("desc").value     = e.desc;
   document.getElementById("location").value = e.location;
-  const type = e.allday ? "allday" : "normal";
-  setEventType(type);
+
+  setEventType(e.allday ? "allday" : "normal");
   if (e.allday) {
-    const dateStartEl = document.getElementById("date_start");
-    if (dateStartEl) dateStartEl.value = e.date || "";
-    const dateEndEl = document.getElementById("date_end");
-    if (dateEndEl) dateEndEl.value = e.date_end || "";
+    const dsEl = document.getElementById("date_start");
+    if (dsEl) dsEl.value = e.date || "";
+    const deEl = document.getElementById("date_end");
+    if (deEl) deEl.value = e.date_end || "";
   } else {
     document.getElementById("date").value = e.date;
     setTimeDisplay("start", e.start);
     setTimeDisplay("end",   e.end);
   }
+
   document.getElementById("category").value  = e.category;
   document.getElementById("reminder1").value = e.reminder1 || "";
   document.getElementById("reminder2").value = e.reminder2 || "";
-
   setActiveCategory("form", e.category);
 }
 
@@ -307,18 +268,9 @@ function deleteEvent(id) {
     title: "Termin löschen",
     text: "Diesen Termin wirklich löschen?",
     onConfirm: async () => {
-      // Karte visuell ausgrauen während Löschung läuft
       const card = document.querySelector(`[data-id="${id}"]`);
       if (card) card.style.opacity = "0.4";
-
-      try {
-        await apiFetch(`/events/${id}`, { method: "DELETE" });
-        store.events = store.events.filter(e => e.id !== id);
-        render();
-      } catch {
-        // Fehler schon im Modal angezeigt
-        if (card) card.style.opacity = "1";  // Ausgrauen rückgängig
-      }
+      await deleteEventFromGitHub(id);
     }
   });
 }
@@ -328,16 +280,16 @@ function resetForm() {
   document.getElementById("formTitle").textContent = "➕ Termin";
   setEventType("normal");
   document.getElementById("date").value = "";
-  const dateStartEl = document.getElementById("date_start");
-  if (dateStartEl) dateStartEl.value = "";
-  const dateEndEl = document.getElementById("date_end");
-  if (dateEndEl) dateEndEl.value = "";
+  const dsEl = document.getElementById("date_start");
+  if (dsEl) dsEl.value = "";
+  const deEl = document.getElementById("date_end");
+  if (deEl) deEl.value = "";
   setTimeDisplay("start", "");
   setTimeDisplay("end",   "");
-  document.getElementById("title").value           = "";
-  document.getElementById("desc").value            = "";
-  document.getElementById("location").value        = DEFAULT_LOCATION;
-  document.getElementById("category").value        = "";
+  document.getElementById("title").value          = "";
+  document.getElementById("desc").value           = "";
+  document.getElementById("location").value       = DEFAULT_LOCATION;
+  document.getElementById("category").value       = "";
   document.getElementById("templateSelect").value = "";
   document.getElementById("reminder1").value      = "";
   document.getElementById("reminder2").value      = "";
@@ -354,10 +306,10 @@ function getCurrentEventType() {
 }
 
 function setEventType(type) {
-  const btnNormal  = document.getElementById("btn-normal");
-  const btnAllday  = document.getElementById("btn-allday");
-  const blockNorm  = document.getElementById("block-normal");
-  const blockAll   = document.getElementById("block-allday");
+  const btnNormal = document.getElementById("btn-normal");
+  const btnAllday = document.getElementById("btn-allday");
+  const blockNorm = document.getElementById("block-normal");
+  const blockAll  = document.getElementById("block-allday");
   if (!btnNormal) return;
 
   if (type === "allday") {
@@ -365,7 +317,6 @@ function setEventType(type) {
     btnAllday.classList.add("active");
     blockNorm.style.display = "none";
     blockAll.style.display  = "block";
-    // Zeitfelder leeren wenn auf ganztägig gewechselt
     setTimeDisplay("start", "");
     setTimeDisplay("end",   "");
   } else {
@@ -373,9 +324,8 @@ function setEventType(type) {
     btnNormal.classList.add("active");
     blockNorm.style.display = "block";
     blockAll.style.display  = "none";
-    // date_end leeren wenn auf normal gewechselt
-    const dateEndEl = document.getElementById("date_end");
-    if (dateEndEl) dateEndEl.value = "";
+    const deEl = document.getElementById("date_end");
+    if (deEl) deEl.value = "";
   }
 }
 
@@ -385,23 +335,15 @@ function setEventType(type) {
 
 function exportEvents() {
   if (store.events.length === 0) {
-    showModal({
-      title: "Keine Termine",
-      text: "Es sind keine Termine vorhanden die exportiert werden könnten.",
-      onConfirm: () => {}
-    });
+    showModal({ title: "Keine Termine", text: "Es sind keine Termine vorhanden.", onConfirm: () => {} });
     return;
   }
 
-  const json     = JSON.stringify(store.events, null, 2);
-  const blob     = new Blob([json], { type: "application/json" });
-  const url      = URL.createObjectURL(blob);
-  const date     = new Date().toISOString().slice(0, 10);
-  const filename = `fw-termine-${date}.json`;
-
+  const blob = new Blob([JSON.stringify(store.events, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = filename;
+  a.download = `fw-termine-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -414,100 +356,78 @@ function importEvents(event) {
   const reader = new FileReader();
   reader.onload = async (e) => {
     let imported;
-
-    // JSON parsen
     try {
       imported = JSON.parse(e.target.result);
     } catch {
-      showModal({
-        title: "Ungültige Datei",
-        text: "Die Datei konnte nicht gelesen werden. Bitte wähle eine gültige FW-Termine JSON-Datei.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Ungültige Datei", text: "Die Datei konnte nicht gelesen werden.", onConfirm: () => {} });
       return;
     }
 
-    // Format prüfen
     if (!Array.isArray(imported)) {
-      showModal({
-        title: "Ungültiges Format",
-        text: "Die Datei enthält keine gültige Terminliste.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Ungültiges Format", text: "Die Datei enthält keine gültige Terminliste.", onConfirm: () => {} });
       return;
     }
 
-    // Nur Einträge mit ID und Datum akzeptieren
-    const valid = imported.filter(e =>
-      e && typeof e === "object" && e.id && e.date
-    );
+    const valid = imported.filter(e => e && typeof e === "object" && e.id && e.date);
 
     if (valid.length === 0) {
-      showModal({
-        title: "Keine Termine gefunden",
-        text: "Die Datei enthält keine lesbaren Termine.",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Keine Termine gefunden", text: "Die Datei enthält keine lesbaren Termine.", onConfirm: () => {} });
       return;
     }
 
-    // Zusammenführen: nur Termine mit unbekannter ID importieren
     const existingIds = new Set(store.events.map(e => e.id));
     const newEvents   = valid.filter(e => !existingIds.has(e.id));
 
     if (newEvents.length === 0) {
-      showModal({
-        title: "Nichts Neues",
-        text: "Alle Termine in der Datei sind bereits vorhanden (IDs stimmen überein).",
-        onConfirm: () => {}
-      });
+      showModal({ title: "Nichts Neues", text: "Alle Termine sind bereits vorhanden.", onConfirm: () => {} });
       return;
     }
 
-    // Bestätigung einholen
     showModal({
       title: "Termine importieren",
       text: `${newEvents.length} neue Termine werden importiert (${valid.length - newEvents.length} bereits vorhanden).`,
       onConfirm: async () => {
-        let erfolg = 0;
-        let fehler = 0;
+        showLoading(true);
 
-        // Jeden neuen Termin einzeln per POST auf den Server schreiben
-        for (const ev of newEvents) {
-          try {
-            const created = await apiFetch("/events", {
-              method: "POST",
-              body: JSON.stringify({
-                id:       ev.id,           // originale ID beibehalten
-                title:    ev.title    || "",
-                date:     ev.date     || "",
-                date_end: ev.date_end || "",
-                allday:   ev.allday   || false,
-                start:    ev.start    || "",
-                end:      ev.end      || "",
-                location: ev.location || "",
-                desc:     ev.desc     || "",
-                category: ev.category || "other",
-                reminder1: ev.reminder1 || "",
-                reminder2: ev.reminder2 || ""
-              })
-            });
-            if (created) {
-              store.events.push(created);
-              erfolg++;
-            }
-          } catch {
-            fehler++;
-          }
+        // Alle neuen Termine in den Store einfügen
+        newEvents.forEach(ev => {
+          store.events.push({
+            id:        ev.id || crypto.randomUUID(),
+            title:     ev.title     || "",
+            date:      ev.date      || "",
+            date_end:  ev.date_end  || "",
+            allday:    ev.allday    || false,
+            start:     ev.start     || "",
+            end:       ev.end       || "",
+            location:  ev.location  || "",
+            desc:      ev.desc      || "",
+            category:  ev.category  || "other",
+            reminder1: ev.reminder1 || "",
+            reminder2: ev.reminder2 || ""
+          });
+        });
+
+        // Einmal als gesamte Liste zu GitHub schreiben
+        const result = await saveEvents();
+        showLoading(false);
+
+        if (result.ok) {
+          render();
+          showModal({
+            title: "Import abgeschlossen",
+            text: `${newEvents.length} Termin(e) erfolgreich importiert.`,
+            onConfirm: () => {}
+          });
+        } else {
+          // Rollback
+          const importedIds = new Set(newEvents.map(e => e.id));
+          store.events = store.events.filter(e => !importedIds.has(e.id));
+          showModal({
+            title: "Import fehlgeschlagen",
+            text: `Fehler: ${result.reason}\n\nBitte versuche es erneut.`,
+            onConfirm: () => {}
+          });
         }
-
-        render();
-
-        const msg = fehler === 0
-          ? `${erfolg} Termin(e) erfolgreich importiert.`
-          : `${erfolg} importiert, ${fehler} fehlgeschlagen.`;
-
-        showModal({ title: "Import abgeschlossen", text: msg, onConfirm: () => {} });
       }
     });
   };
