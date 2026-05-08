@@ -1,0 +1,838 @@
+/* =========================
+   BASE / RESET
+========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+/* FIX: body nur einmal definiert (war auf zwei Blöcke aufgeteilt) */
+body {
+  font-family: Arial;
+  padding: 20px;
+  padding-top: 90px;
+  padding-bottom: 90px;
+  max-width: 500px;
+  margin: auto;
+  background: #f4f4f4;
+}
+
+h1 {
+  text-align: center;
+}
+
+/* =========================
+   FORM ELEMENTS
+========================= */
+
+input, textarea, select {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #eaeaea;
+  font-size: 14px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* =========================
+   GRID / HOME CARDS
+========================= */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card {
+  background: white;
+  padding: 14px;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+.primary {
+  background: #d32f2f;
+  color: white;
+}
+
+/* =========================
+   SCREEN SYSTEM
+========================= */
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* =========================
+   FORM SECTION
+========================= */
+
+.form-section {
+  background: white;
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  width: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* =========================
+   LABELS
+========================= */
+
+label {
+  font-size: 12px;
+  color: #666;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* =========================
+   TIME ROW
+========================= */
+
+.row-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.row-time input {
+  flex: 1;
+}
+
+.time-sep {
+  font-weight: bold;
+  color: #666;
+  padding: 0 4px;
+}
+
+/* =========================
+   CATEGORY BADGES (Formular + Vorlagen)
+========================= */
+
+.form-category,
+.tpl-category {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.form-category .badge,
+.tpl-category .badge {
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #eee;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* Aktiv-Farben Kategorie-Badges */
+.form-category .badge[data-cat="active"].selected,
+.tpl-category  .badge[data-cat="active"].selected { background: #ff4d4d; color: white; }
+
+.form-category .badge[data-cat="group"].selected,
+.tpl-category  .badge[data-cat="group"].selected  { background: #4d79ff; color: white; }
+
+.form-category .badge[data-cat="resp"].selected,
+.tpl-category  .badge[data-cat="resp"].selected   { background: #ffcc00; color: #333; }
+
+.form-category .badge[data-cat="club"].selected,
+.tpl-category  .badge[data-cat="club"].selected   { background: #33cc66; color: white; }
+
+.form-category .badge[data-cat="other"].selected,
+.tpl-category  .badge[data-cat="other"].selected  { background: #999; color: white; }
+
+/* =========================
+   FILTER BADGES (Terminliste)
+========================= */
+
+#eventFilters {
+  background: white;
+  padding: 10px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#eventFilters .badge {
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #eee;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+#eventFilters .filter-badge[data-cat="active"].selected { background: #ff4d4d; color: white; }
+#eventFilters .filter-badge[data-cat="group"].selected  { background: #4d79ff; color: white; }
+#eventFilters .filter-badge[data-cat="resp"].selected   { background: #ffcc00; color: #333; }
+#eventFilters .filter-badge[data-cat="club"].selected   { background: #33cc66; color: white; }
+#eventFilters .filter-badge[data-cat="other"].selected  { background: #999; color: white; }
+
+#togglePast.selected {
+  background: #333;
+  color: white;
+}
+
+/* =========================
+   BADGE (generisch)
+========================= */
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* =========================
+   TOAST
+========================= */
+
+#toast {
+  visibility: hidden;
+  position: fixed;
+  bottom: 90px; /* über der Bottom Bar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  z-index: 1000;
+}
+
+#toast.show {
+  visibility: visible;
+}
+
+/* =========================
+   UTIL
+========================= */
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* =========================
+   MODAL
+========================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+.danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.hidden {
+  display: none;
+}
+
+/* =========================
+   APP HEADER
+========================= */
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 64px;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+
+  background: rgba(211, 47, 47, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  transform: translateZ(0);
+}
+
+/* =========================
+   BOTTOM NAVIGATION BAR
+========================= */
+
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  z-index: 1000;
+
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.10);
+}
+
+.bottom-bar button {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  color: #444;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bottom-bar button span.icon {
+  font-size: 20px;
+  margin-bottom: 3px;
+}
+
+.bottom-bar button.active {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+#header-home {
+  cursor: pointer;
+  font-size: 24px;
+}
+
+.header-gap {
+  width: 10px;
+}
+
+/* =========================
+   🔔 REMINDER NEBENEINANDER
+========================= */
+
+.row-reminders {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.reminder-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.reminder-col select {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.reminder-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+/* =========================
+   🟢 STATUS DOT (Header)
+========================= */
+
+/* Schiebt den Punkt an den rechten Rand des Headers */
+.header-spacer {
+  flex: 1;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  flex-shrink: 0;
+  transition: background 0.4s ease;
+}
+
+/* 🟡 Prüft… */
+.status-checking {
+  background: #ffcc00;
+  box-shadow: 0 0 6px rgba(255, 204, 0, 0.7);
+  animation: pulse-checking 1.2s ease-in-out infinite;
+}
+
+/* 🟢 Online */
+.status-online {
+  background: #33cc66;
+  box-shadow: 0 0 6px rgba(51, 204, 102, 0.7);
+}
+
+/* 🔴 Offline */
+.status-offline {
+  background: #ff4d4d;
+  box-shadow: 0 0 6px rgba(255, 77, 77, 0.7);
+}
+
+@keyframes pulse-checking {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* =========================
+   ⏰ TIME PICKER MODAL
+========================= */
+
+.tp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;          /* standardmäßig unsichtbar */
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.tp-overlay.open {
+  display: flex;          /* nur sichtbar wenn .open gesetzt */
+}
+
+.tp-modal {
+  background: white;
+  border-radius: 18px;
+  width: 88%;
+  max-width: 320px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+/* Header */
+.tp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tp-header span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.tp-clear {
+  all: unset;
+  font-size: 13px;
+  color: #d32f2f;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.tp-clear:hover {
+  background: #fff0f0;
+}
+
+/* Scroll columns */
+.tp-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 8px 18px;
+  height: 200px;
+}
+
+.tp-scroll-wrap {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tp-scroll {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tp-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tp-scroll-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 500;
+  color: #bbb;
+  scroll-snap-align: center;
+  cursor: pointer;
+  transition: color 0.15s, font-size 0.15s;
+  user-select: none;
+}
+
+.tp-scroll-item.selected {
+  color: #d32f2f;
+  font-size: 26px;
+  font-weight: 700;
+  position: relative;
+  z-index: 3;            /* über dem roten Hintergrund-Highlight */
+}
+
+/* Padding items top/bottom so first/last can center */
+.tp-scroll-pad {
+  height: 80px; /* = 2 items × 40px */
+  flex-shrink: 0;
+}
+
+/* Fade overlay top/bottom */
+.tp-fade-top,
+.tp-fade-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 80px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tp-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, white 10%, transparent);
+}
+
+.tp-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, white 10%, transparent);
+}
+
+/* Center line indicator */
+.tp-scroll-wrap::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 40px;
+  background: rgba(211, 47, 47, 0.10);
+  border-radius: 10px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Colon separator */
+.tp-colon {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  padding: 0 6px;
+  margin-top: -4px;
+  flex-shrink: 0;
+}
+
+/* Buttons */
+.tp-actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.tp-cancel {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  padding: 11px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  background: #f0f0f0;
+  cursor: pointer;
+}
+
+.tp-confirm {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  padding: 11px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: #d32f2f;
+  cursor: pointer;
+}
+
+/* Trigger button (replaces input[type=time]) */
+.time-picker-btn {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  background: #eaeaea;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+.time-picker-btn:hover {
+  background: #e0e0e0;
+}
+
+.time-picker-btn.empty {
+  color: #aaa;
+  font-weight: 400;
+}
+
+/* =========================
+   📤📥 VORLAGEN EXPORT / IMPORT
+========================= */
+
+.tpl-io-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.tpl-io-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.tpl-io-btn:active {
+  background: #f0f0f0;
+}
+
+/* =========================
+   📅 GANZTÄGIG TOGGLE
+========================= */
+
+.allday-toggle-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.allday-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 10px;
+  background: #eaeaea;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.allday-btn.active {
+  background: #d32f2f;
+  color: white;
+}
+
+/* =========================
+   📄 EINLADUNG SCREEN
+========================= */
+
+.einladung-preview {
+  padding: 0;
+  overflow: hidden;
+}
+
+.einladung-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #d32f2f;
+  color: white;
+  padding: 16px;
+  border-radius: 14px 14px 0 0;
+}
+
+.einladung-logo {
+  font-size: 32px;
+}
+
+.einladung-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.einladung-subtitle {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.einladung-block {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.einladung-block:last-child {
+  border-bottom: none;
+}
+
+.einladung-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d32f2f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.einladung-value {
+  font-size: 14px;
+  color: #222;
+}
+
+.einladung-multiline {
+  display: block;
+}
+
+.einladung-wann-row {
+  font-size: 14px;
+  color: #222;
+  margin-bottom: 3px;
+}
+
+.einladung-textarea {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  background: #fafafa;
+  resize: vertical;
+  margin-top: 2px;
+}
+
+.einladung-textarea:focus {
+  outline: none;
+  border-color: #d32f2f;
+  background: white;
+}
+
+.einladung-input {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  background: #fafafa;
+  margin-top: 2px;
+  display: block;
+}
+
+.einladung-input:focus {
+  outline: none;
+  border-color: #d32f2f;
+}
+
+.einladung-links .einladung-link-text {
+  font-size: 12px;
+  color: #1a50b4;
+  word-break: break-all;
+}
+
+.einladung-footer {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  text-align: right;
+}

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FW Terminplaner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app-header">
+  <span id="header-home">🚒</span>
+  <span class="header-gap"></span>
+  <span id="header-text">FW Terminplaner</span>
+  <span class="header-spacer"></span>
+  <span id="status-dot" class="status-dot status-checking" title="Verbindung wird geprüft…"></span>
+</div>
+
+<!-- BOTTOM NAVIGATION BAR -->
+<div id="bottom-bar" class="bottom-bar"></div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="grid">
+    <div class="card primary" onclick="showScreen('form')">
+      <h2>➕ Neuer Termin</h2>
+    </div>
+    <div class="card" onclick="showScreen('events')">
+      <h2>📋 Terminliste</h2>
+    </div>
+    <div class="card" onclick="showScreen('templates')">
+      <h2>📚 Vorlagen</h2>
+    </div>
+    <div class="card" onclick="showScreen('einladung-menu')">
+      <h2>📄 Einladung</h2>
+    </div>
+    <div class="card" onclick="showScreen('einstellungen')">
+      <h2>⚙️ Einstellungen</h2>
+    </div>
+  </div>
+</div>
+
+<!-- EVENTS -->
+<div id="screen-events" class="screen">
+  <h2>📋 Terminliste</h2>
+
+  <div id="eventFilters" class="filter-bar category-badges">
+    <div class="badge filter-badge" data-cat="active">Aktive</div>
+    <div class="badge filter-badge" data-cat="group">Gruppenführer</div>
+    <div class="badge filter-badge" data-cat="resp">Atemschutz</div>
+    <div class="badge filter-badge" data-cat="club">Verein</div>
+    <div class="badge filter-badge" data-cat="other">Sonstiges</div>
+    <div class="badge" id="togglePast">Vergangene ausblenden</div>
+    <div class="badge" id="deletePast">🗑️ Vergangene löschen</div>
+  </div>
+
+  <div class="tpl-io-row" style="margin-bottom:12px;">
+    <button class="tpl-io-btn" onclick="exportEvents()">📤 Exportieren</button>
+    <button class="tpl-io-btn" onclick="document.getElementById('event-import-input').click()">📥 Importieren</button>
+    <button class="tpl-io-btn" onclick="exportICS()">📅 .ics erstellen</button>
+    <input type="file" id="event-import-input" accept=".json" style="display:none" onchange="importEvents(event)">
+  </div>
+
+  <div id="eventList"></div>
+</div>
+
+<!-- FORM -->
+<div id="screen-form" class="screen">
+  <h2 id="formTitle">➕ Termin</h2>
+
+  <div class="form-section">
+    <label>📋 Vorlage</label>
+    <select id="templateSelect" onchange="applyTemplateFromDropdown()">
+      <option value="">-- Vorlage wählen --</option>
+    </select>
+  </div>
+
+  <div class="form-section">
+    <label>✏️ Titel</label>
+    <input type="text" id="title" placeholder="z. B. Übung, Einsatz">
+  </div>
+
+  <div class="form-section">
+    <label>🏷️ Kategorie</label>
+    <div class="category-badges form-category">
+      <div class="badge" data-cat="active">Aktive</div>
+      <div class="badge" data-cat="group">Gruppenführer</div>
+      <div class="badge" data-cat="resp">Atemschutz</div>
+      <div class="badge" data-cat="club">Verein</div>
+      <div class="badge" data-cat="other">Sonstiges</div>
+    </div>
+    <input type="hidden" id="category">
+  </div>
+
+  <div class="form-section">
+
+    <!-- Typ-Schalter -->
+    <div class="allday-toggle-row">
+      <button type="button" class="allday-btn active" id="btn-normal" onclick="setEventType('normal')">⏰ Normal</button>
+      <button type="button" class="allday-btn" id="btn-allday" onclick="setEventType('allday')">📅 Ganztägig</button>
+    </div>
+
+    <!-- Normaler Termin: Von-Datum + Zeiten -->
+    <div id="block-normal">
+      <label>📅 Datum</label>
+      <input type="date" id="date">
+      <label>⏰ Zeit</label>
+      <div class="row-time">
+        <button type="button" class="time-picker-btn" id="start-display" onclick="openTimePicker('start')">– : –</button>
+        <span class="time-sep">–</span>
+        <button type="button" class="time-picker-btn" id="end-display" onclick="openTimePicker('end')">– : –</button>
+      </div>
+      <input type="hidden" id="start">
+      <input type="hidden" id="end">
+    </div>
+
+    <!-- Ganztägig/Mehrtägig: Von + Bis -->
+    <div id="block-allday" style="display:none;">
+      <label>📅 Von</label>
+      <input type="date" id="date_start">
+      <label>📅 Bis <span style="font-size:11px; color:#aaa;">(leer = ganztägig 1 Tag)</span></label>
+      <input type="date" id="date_end">
+      <input type="hidden" id="start">
+      <input type="hidden" id="end">
+    </div>
+
+    <!-- Erinnerungen (immer sichtbar) -->
+    <label>Erinnerungen</label>
+    <div class="row-reminders">
+      <div class="reminder-col">
+        <label class="reminder-label">🔔 Erinnerung 1</label>
+        <select id="reminder1">
+        <option value="">– keine –</option>
+        <option value="60">1 Stunde</option>
+        <option value="120">2 Stunden</option>
+        <option value="240">4 Stunden</option>
+        <option value="720">12 Stunden</option>
+        <option value="960">16 Stunden</option>
+        <option value="1200">20 Stunden</option>
+        <option value="1440">1 Tag</option>
+        </select>
+      </div>
+      <div class="reminder-col">
+        <label class="reminder-label">🔔 Erinnerung 2</label>
+        <select id="reminder2">
+        <option value="">– keine –</option>
+        <option value="60">1 Stunde</option>
+        <option value="120">2 Stunden</option>
+        <option value="240">4 Stunden</option>
+        <option value="720">12 Stunden</option>
+        <option value="960">16 Stunden</option>
+        <option value="1200">20 Stunden</option>
+        <option value="1440">1 Tag</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <label>📍 Ort</label>
+    <input type="text" id="location" placeholder="z. B. Gerätehaus">
+  </div>
+
+  <div class="form-section">
+    <label>📖 Beschreibung</label>
+    <textarea id="desc" placeholder="Details..."></textarea>
+  </div>
+
+</div>
+
+<div id="toast">✓ gespeichert</div>
+
+<!-- TEMPLATES -->
+<div id="screen-templates" class="screen">
+  <h2>📚 Vorlagen</h2>
+  <div class="grid">
+    <div class="card primary" onclick="openTemplateForm()">
+      <h2>➕ Neue Vorlage</h2>
+    </div>
+    <div class="card" onclick="showScreen('template-list')">
+      <h2>📋 Vorlagen verwalten</h2>
+    </div>
+  </div>
+
+  <div class="tpl-io-row">
+    <button class="tpl-io-btn" onclick="exportTemplates()">📤 Exportieren</button>
+    <button class="tpl-io-btn" onclick="document.getElementById('tpl-import-input').click()">📥 Importieren</button>
+    <input type="file" id="tpl-import-input" accept=".json" style="display:none" onchange="importTemplates(event)">
+  </div>
+</div>
+
+<!-- TEMPLATE FORM -->
+<div id="screen-template-form" class="screen">
+  <h2 id="tplFormTitle">➕ Vorlage</h2>
+
+  <div class="form-section">
+    <label>✏️ Titel</label>
+    <input id="tpl_title" placeholder="z. B. Übung, Einsatz">
+  </div>
+
+  <div class="form-section">
+    <label>🏷️ Kategorie</label>
+    <div class="category-badges tpl-category">
+      <div class="badge" data-cat="active">Aktive</div>
+      <div class="badge" data-cat="group">Gruppenführer</div>
+      <div class="badge" data-cat="resp">Atemschutz</div>
+      <div class="badge" data-cat="club">Verein</div>
+      <div class="badge" data-cat="other">Sonstiges</div>
+    </div>
+    <input type="hidden" id="tpl_category">
+  </div>
+
+  <div class="form-section">
+
+    <!-- Typ-Schalter -->
+    <div class="allday-toggle-row">
+      <button type="button" class="allday-btn active" id="tpl-btn-normal" onclick="setTplEventType('normal')">⏰ Normal</button>
+      <button type="button" class="allday-btn" id="tpl-btn-allday" onclick="setTplEventType('allday')">📅 Ganztägig</button>
+    </div>
+
+    <!-- Normal -->
+    <div id="tpl-block-normal">
+      <label>⏰ Zeit</label>
+      <div class="row-time">
+        <button type="button" class="time-picker-btn" id="tpl_start-display" onclick="openTimePicker('tpl_start')">– : –</button>
+        <span class="time-sep">–</span>
+        <button type="button" class="time-picker-btn" id="tpl_end-display" onclick="openTimePicker('tpl_end')">– : –</button>
+      </div>
+      <input type="hidden" id="tpl_start">
+      <input type="hidden" id="tpl_end">
+    </div>
+
+    <!-- Ganztägig -->
+    <div id="tpl-block-allday" style="display:none;">
+      <input type="hidden" id="tpl_start">
+      <input type="hidden" id="tpl_end">
+      <p style="font-size:12px; color:#888; margin:8px 0 0;">Vorlage ohne Datum — Typ wird beim Anwenden übernommen.</p>
+    </div>
+
+    <!-- Erinnerungen -->
+    <label>Erinnerungen</label>
+    <div class="row-reminders">
+      <div class="reminder-col">
+        <label class="reminder-label">🔔 Erinnerung 1</label>
+        <select id="tpl_reminder1">
+        <option value="">– keine –</option>
+        <option value="60">1 Stunde</option>
+        <option value="120">2 Stunden</option>
+        <option value="240">4 Stunden</option>
+        <option value="720">12 Stunden</option>
+        <option value="960">16 Stunden</option>
+        <option value="1200">20 Stunden</option>
+        <option value="1440">1 Tag</option>
+        </select>
+      </div>
+      <div class="reminder-col">
+        <label class="reminder-label">🔔 Erinnerung 2</label>
+        <select id="tpl_reminder2">
+        <option value="">– keine –</option>
+        <option value="60">1 Stunde</option>
+        <option value="120">2 Stunden</option>
+        <option value="240">4 Stunden</option>
+        <option value="720">12 Stunden</option>
+        <option value="960">16 Stunden</option>
+        <option value="1200">20 Stunden</option>
+        <option value="1440">1 Tag</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <label>📍 Ort</label>
+    <input id="tpl_location" placeholder="z. B. Gerätehaus">
+  </div>
+
+  <div class="form-section">
+    <label>📖 Beschreibung</label>
+    <textarea id="tpl_desc" placeholder="Details..."></textarea>
+  </div>
+
+</div>
+
+<!-- TEMPLATE LIST -->
+<div id="screen-template-list" class="screen">
+  <h2>📋 Vorlagen verwalten</h2>
+  <div id="templateList"></div>
+</div>
+
+<!-- EINLADUNG MENU -->
+<div id="screen-einladung-menu" class="screen">
+  <h2>📄 Einladung</h2>
+  <div class="grid">
+    <div class="card primary" onclick="openEinladung()">
+      <h2>📄 Einladung erstellen</h2>
+    </div>
+    <div class="card" onclick="showScreen('geburtstage')">
+      <h2>🎂 Geburtstage verwalten</h2>
+    </div>
+  </div>
+</div>
+
+<!-- EINLADUNG -->
+<div id="screen-einladung" class="screen">
+  <h2>📄 Einladung erstellen</h2>
+
+  <!-- Monat wählen -->
+  <div class="form-section">
+    <label>📅 Monat</label>
+    <div class="allday-toggle-row" id="month-selector"></div>
+  </div>
+
+  <!-- Vorschau / Editor -->
+  <div class="form-section einladung-preview" id="einladung-editor">
+
+    <div class="einladung-header">
+      <div class="einladung-logo">🚒</div>
+      <div>
+        <div class="einladung-title">Einladung</div>
+        <div class="einladung-subtitle">Freiwillige Feuerwehr Demling</div>
+      </div>
+    </div>
+
+
+    <div class="einladung-block">
+      <span class="einladung-label">Wann:</span>
+      <div id="einladung-wann" class="einladung-value einladung-multiline"></div>
+    </div>
+
+    <div class="einladung-block">
+      <span class="einladung-label">Wo:</span>
+      <span class="einladung-value">Feuerwehrgerätehaus (FWGH)</span>
+    </div>
+
+    <div class="einladung-block">
+      <span class="einladung-label">Thema:</span>
+      <textarea id="einladung-thema" class="einladung-textarea" placeholder="Thema der Übung…" rows="2"></textarea>
+    </div>
+
+    <div class="einladung-block">
+      <span class="einladung-label">Weitere Informationen:</span>
+      <textarea id="einladung-info" class="einladung-textarea" placeholder="Weitere Informationen…" rows="4"></textarea>
+    </div>
+
+    <div class="einladung-block" id="einladung-geburtstag-block">
+      <span class="einladung-label">🎂 Geburtstagskinder:</span>
+      <textarea id="einladung-geburtstag" class="einladung-textarea" placeholder="Namen der Geburtstagskinder…" rows="2"></textarea>
+    </div>
+
+    <div class="einladung-block einladung-links">
+      <span class="einladung-label">📥 Termine herunterladen:</span>
+      <span class="einladung-value einladung-link-text">https://raw.githubusercontent.com/fwd-dem/fw-demling-termine/main/fw_demling_termine.ics</span>
+    </div>
+
+    <div class="einladung-block">
+      <span class="einladung-label">Hinweis: <span style="font-size:11px;color:#aaa;">(optional)</span></span>
+      <textarea id="einladung-hinweis" class="einladung-textarea" placeholder="Optionaler Hinweis…" rows="2"></textarea>
+    </div>
+
+    <div class="einladung-block einladung-footer">
+      <span>1. Kommandant / 1. Vorstand</span>
+    </div>
+
+  </div>
+
+  <!-- PDF Button -->
+  <div style="margin-bottom: 20px;">
+    <button onclick="generateEinladungPDF()" style="background:#d32f2f; color:white; font-size:15px;">
+      📥 PDF erstellen & teilen
+    </button>
+  </div>
+
+</div>
+
+<!-- GEBURTSTAGE -->
+<div id="screen-geburtstage" class="screen">
+  <h2>🎂 Geburtstage verwalten</h2>
+
+  <div class="form-section">
+    <label>➕ Mitglied hinzufügen</label>
+    <input type="text" id="gb-name" placeholder="Vorname Nachname">
+    <label style="margin-top:8px;">Geburtsmonat</label>
+    <select id="gb-monat">
+      <option value="">– Monat wählen –</option>
+        <option value="1">Januar</option>
+        <option value="2">Februar</option>
+        <option value="3">März</option>
+        <option value="4">April</option>
+        <option value="5">Mai</option>
+        <option value="6">Juni</option>
+        <option value="7">Juli</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">Oktober</option>
+        <option value="11">November</option>
+        <option value="12">Dezember</option>
+    </select>
+    <button onclick="addGeburtstag()" style="background:#d32f2f;color:white;margin-top:8px;">➕ Hinzufügen</button>
+  </div>
+
+  <div class="form-section">
+    <label>📋 Alle Mitglieder</label>
+    <div id="geburtstag-list"></div>
+  </div>
+
+  <div class="tpl-io-row">
+    <button class="tpl-io-btn" onclick="exportGeburtstage()">📤 Exportieren</button>
+    <button class="tpl-io-btn" onclick="document.getElementById('gb-import-input').click()">📥 Importieren</button>
+    <input type="file" id="gb-import-input" accept=".json" style="display:none" onchange="importGeburtstage(event)">
+  </div>
+</div>
+
+<!-- EINSTELLUNGEN -->
+<div id="screen-einstellungen" class="screen">
+  <h2>⚙️ Einstellungen</h2>
+
+  <div class="form-section">
+    <label>🔑 GitHub Personal Access Token</label>
+    <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx">
+    <p style="font-size:11px;color:#888;margin:4px 0 0;">
+      Wird dauerhaft auf diesem Gerät gespeichert. Berechtigt zum Lesen und Schreiben aller Termine, Vorlagen und Geburtstage.
+    </p>
+    <button onclick="saveGithubToken()" style="background:#d32f2f;color:white;margin-top:8px;">
+      💾 Token speichern & testen
+    </button>
+  </div>
+
+  <div class="form-section">
+    <label>📅 ICS-Kalender URL</label>
+    <p id="ics-url" style="font-size:11px;color:#1a50b4;word-break:break-all;margin:4px 0;"></p>
+    <p style="font-size:11px;color:#888;margin:0;">
+      Diese URL wird beim PDF-Erstellen automatisch aktualisiert.
+    </p>
+  </div>
+
+  <div class="form-section">
+    <label>ℹ️ Repositories</label>
+    <p style="font-size:12px;color:#444;margin:4px 0;">🔒 Daten: fwd-dem / fw-terminplaner-data</p>
+    <p style="font-size:12px;color:#444;margin:4px 0;">🌐 ICS: fwd-dem / fw-demling-termine</p>
+    <p style="font-size:12px;color:#444;margin:4px 0;">🌐 App: fwd-dem / fw-terminplaner</p>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="modal-title">Bestätigung</h3>
+    <p id="modal-text">Bist du sicher?</p>
+    <div class="modal-actions">
+      <button id="modal-cancel">Abbrechen</button>
+      <button id="modal-confirm" class="danger">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIME PICKER MODAL -->
+<div id="time-picker-modal" class="tp-overlay">
+  <div class="tp-modal">
+    <div class="tp-header">
+      <span id="tp-label">Uhrzeit wählen</span>
+      <button type="button" class="tp-clear" onclick="clearTimePicker()">Löschen</button>
+    </div>
+    <div class="tp-body">
+      <div class="tp-scroll-wrap">
+        <div class="tp-fade-top"></div>
+        <div class="tp-scroll" id="tp-hours"></div>
+        <div class="tp-fade-bottom"></div>
+      </div>
+      <div class="tp-colon">:</div>
+      <div class="tp-scroll-wrap">
+        <div class="tp-fade-top"></div>
+        <div class="tp-scroll" id="tp-minutes"></div>
+        <div class="tp-fade-bottom"></div>
+      </div>
+    </div>
+    <div class="tp-actions">
+      <button type="button" class="tp-cancel" onclick="closeTimePicker()">Abbrechen</button>
+      <button type="button" class="tp-confirm" onclick="confirmTimePicker()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- 1. Basis: Konfiguration, Store, globaler State -->
+<script src="config.js"></script>
+
+<!-- 2. Infrastruktur -->
+<script src="github.js"></script>
+<script src="api.js"></script>
+<script src="timepicker.js"></script>
+<script src="ui.js"></script>
+
+<!-- 3. Fachlogik -->
+<script src="events.js"></script>
+<script src="templates.js"></script>
+<script src="geburtstage.js"></script>
+
+<!-- 4. Ausgabe & Integration -->
+<script src="ics.js"></script>
+<script src="einladung.js"></script>
+</body>
+</html>
