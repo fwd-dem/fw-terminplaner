@@ -254,7 +254,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   }
 
   function addText(text, opts = {}) {
-    const { size = 12, bold = false, color = DARK, indent = 0, after = 3 } = opts;
+    const { size = 14, bold = false, color = DARK, indent = 0, after = 3 } = opts;
     doc.setFontSize(size);
     doc.setFont(FONT, bold ? "bold" : "normal");
     doc.setTextColor(...color);
@@ -264,7 +264,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   }
 
   function addParagraphs(text, opts = {}) {
-    const { size = 12, bold = false, color = DARK, indent = 0,
+    const { size = 14, bold = false, color = DARK, indent = 0,
             lineAfter = 1, paraAfter = 3 } = opts;
     const paragraphs = clean(text).split("\n").filter(p => p.trim() !== "");
     paragraphs.forEach((para, i) => {
@@ -378,7 +378,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
 
     y += PAD_TOP;
     if (iconType) drawIcon(iconType, margin, y - 0.5, iconColor || RED);
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setFont(FONT, "bold");
     doc.setTextColor(...(iconColor || RED));
     doc.text(clean(labelText), margin + (iconType ? 5.5 : 0), y + 3.2);
@@ -418,12 +418,12 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   const textAreaRight = LOGO_FFW ? W - margin - LOGO_H * 0.72 - 4 : W - margin;
   const textCenterX   = (textAreaLeft + textAreaRight) / 2;
 
-  doc.setFontSize(20);
+  doc.setFontSize(24);
   doc.setFont(FONT, "bold");
   doc.setTextColor(255, 255, 255);
   doc.text("Blaulicht-Bladl", textCenterX, HEADER_H / 2 - 2, { align: "center" });
 
-  doc.setFontSize(12);
+  doc.setFontSize(14);
   doc.setFont(FONT, "normal");
   doc.setTextColor(255, 210, 210);
   doc.text("Monatsinfo der FW Demling", textCenterX, HEADER_H / 2 + 7, { align: "center" });
@@ -437,7 +437,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
     if (wannRows.length === 0) {
       addText("Keine Termine eingetragen", { size: 12, color: GREY, indent: 9, after: 1 });
     } else {
-      wannRows.forEach(row => addText(row.textContent.trim(), { size: 12, indent: 9, after: 3 }));
+      wannRows.forEach(row => addText(row.textContent.trim(), { size: 14, indent: 9, after: 3 }));
     }
   });
 
@@ -445,20 +445,20 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   const thema = document.getElementById("einladung-thema")?.value.trim();
   if (thema) {
     drawSection("bullet_list", RED, "Übungsthemen", () => {
-      addParagraphs(thema, { size: 12, indent: 9 });
+      addParagraphs(thema, { size: 14, indent: 9 });
     });
   }
 
   // ── ORT ───────────────────────────────────────────────────────
   drawSection("pin", RED, "Ort", () => {
-    addText("Feuerwehrgerätehaus (FWGH)", { size: 12, indent: 9, after: 3 });
+    addText("Feuerwehrgerätehaus (FWGH)", { size: 14, indent: 9, after: 3 });
   });
 
   // ── WEITERE INFORMATIONEN ─────────────────────────────────────
   const info = document.getElementById("einladung-info")?.value.trim();
   if (info) {
     drawSection("info", RED, "Weitere Informationen", () => {
-      addParagraphs(info, { size: 12, indent: 9 });
+      addParagraphs(info, { size: 14, indent: 9 });
     });
   }
 
@@ -466,14 +466,14 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   const hinweis = document.getElementById("einladung-hinweis")?.value.trim();
   if (hinweis) {
     drawSection("star", RED, "Hinweis", () => {
-      addParagraphs(hinweis, { size: 12, indent: 9 });
+      addParagraphs(hinweis, { size: 14, indent: 9 });
     });
   }
 
   // ── KALENDER ABONNIEREN ───────────────────────────────────────
   drawSection("download", BLUE, "Termine herunterladen", () => {
     const icsUrl = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
-    doc.setFontSize(11);
+    doc.setFontSize(14);
     doc.setFont(FONT, "normal");
     doc.setTextColor(...BLUE);
     doc.textWithLink("Hier klicken zum Herunterladen", margin + 5.5, y, { url: icsUrl });
@@ -487,7 +487,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
     const activeMonthBtn = document.querySelector("#month-selector .allday-btn.active");
     const monatsname     = activeMonthBtn ? activeMonthBtn.textContent.split(" ")[0] : "";
     drawSection("cake", RED, "Wir gratulieren zum Geburtstag im " + monatsname, () => {
-      addParagraphs(geburtstag, { size: 12, indent: 9 });
+      addParagraphs(geburtstag, { size: 14, indent: 9 });
     });
   }
 
