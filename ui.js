@@ -18,7 +18,7 @@ function showScreen(screen) {
   setHeaderTitle("FW Terminplaner");
 
   if (screen === "events")        render();
-  if (screen === "template-list") renderTemplates();
+  if (screen === "templates")     renderTemplates();
   if (screen === "geburtstage")   renderGeburtstage();
   if (screen === "git-einstellungen") {
     const tokenEl = document.getElementById("gh-token");
@@ -181,17 +181,9 @@ function setBottomBar(screen) {
 
   if (screen === "template-form") {
     buttons = [
-      { icon: "🏠", text: "Home",      action: () => showScreen("home")          },
-      { icon: "📋", text: "Liste",     action: () => showScreen("template-list") },
-      { icon: "💾", text: "Speichern", action: () => saveTemplate()              },
-      { icon: "↩️", text: "Zurück",   action: () => showScreen("templates")     }
-    ];
-  }
-
-  if (screen === "template-list") {
-    buttons = [
-      { icon: "🏠", text: "Home",   action: () => showScreen("home")      },
-      { icon: "↩️", text: "Zurück", action: () => showScreen("templates") }
+      { icon: "🏠", text: "Home",      action: () => showScreen("home")      },
+      { icon: "💾", text: "Speichern", action: () => saveTemplate()          },
+      { icon: "↩️", text: "Zurück",    action: () => showScreen("templates") }
     ];
   }
 

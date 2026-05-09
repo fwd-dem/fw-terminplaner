@@ -174,20 +174,16 @@
 <!-- TEMPLATES -->
 <div id="screen-templates" class="screen">
   <h2>📚 Vorlagen</h2>
-  <div class="grid">
-    <div class="card primary" onclick="openTemplateForm()">
-      <h2>➕ Neue Vorlage</h2>
-    </div>
-    <div class="card" onclick="showScreen('template-list')">
-      <h2>📋 Vorlagen verwalten</h2>
-    </div>
-  </div>
 
-  <div class="tpl-io-row">
+  <div class="tpl-io-row" style="margin-bottom:12px;">
+    <button class="tpl-io-btn" onclick="openTemplateForm()"
+            style="background:#d32f2f;color:white;">➕ Neue Vorlage</button>
     <button class="tpl-io-btn" onclick="exportTemplates()">📤 Exportieren</button>
     <button class="tpl-io-btn" onclick="document.getElementById('tpl-import-input').click()">📥 Importieren</button>
     <input type="file" id="tpl-import-input" accept=".json" style="display:none" onchange="importTemplates(event)">
   </div>
+
+  <div id="templateList"></div>
 </div>
 
 <!-- TEMPLATE FORM -->
@@ -280,12 +276,6 @@
     <textarea id="tpl_desc" placeholder="Details..."></textarea>
   </div>
 
-</div>
-
-<!-- TEMPLATE LIST -->
-<div id="screen-template-list" class="screen">
-  <h2>📋 Vorlagen verwalten</h2>
-  <div id="templateList"></div>
 </div>
 
 <!-- EINLADUNG -->

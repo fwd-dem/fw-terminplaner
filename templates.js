@@ -46,7 +46,7 @@ async function saveTemplate() {
   showLoading(false);
 
   if (ok) {
-    showScreen("template-list");
+    showScreen("templates");
   } else {
     // Rollback
     if (editTplIndex !== null) {
