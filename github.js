@@ -254,8 +254,8 @@ async function loadAllData() {
     // Kein Token → Modal anzeigen, App bleibt lesend (leere Listen)
     showModal({
       title: "⚙️ Kein Token hinterlegt",
-      text: "Bitte hinterlege deinen GitHub Token in den Einstellungen um Daten zu laden und zu speichern.",
-      onConfirm: () => showScreen("einstellungen")
+      text: "Bitte hinterlege deinen GitHub Token in den Git Einstellungen um Daten zu laden und zu speichern.",
+      onConfirm: () => showScreen("git-einstellungen")
     });
     render();
     renderTemplates();
@@ -274,8 +274,8 @@ async function loadAllData() {
   if (termine.reason === "token_ungueltig") {
     showModal({
       title: "❌ Token ungültig",
-      text: "Der gespeicherte Token wurde von GitHub abgelehnt. Bitte hinterlege einen neuen Token in den Einstellungen.",
-      onConfirm: () => showScreen("einstellungen")
+      text: "Der gespeicherte Token wurde von GitHub abgelehnt. Bitte hinterlege einen neuen Token in den Git Einstellungen.",
+      onConfirm: () => showScreen("git-einstellungen")
     });
     return;
   }
