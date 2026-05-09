@@ -186,8 +186,10 @@ function generateEinladungPDF() {
   //    DejaVuSans-Bold.ttf    → Font Bold
 
   async function fileToBase64(url) {
-    const res  = await fetch(url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url} nicht gefunden (${res.status})`);
     const blob = await res.blob();
+    if (blob.size === 0) throw new Error(`${url} ist leer`);
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload  = () => resolve(reader.result.split(",")[1]);
