@@ -157,12 +157,28 @@ function fillEinladung(year, month) {
    📄 PDF GENERIEREN
 ========================= */
 
-function generateEinladungPDF() {
-  // jsPDF lazy laden
+async function generateEinladungPDF() {
+  // ── 1. ICS ZUERST PUSHEN (direkt am Button-Klick → iOS-kompatibel) ──
+  const icsToday = new Date(); icsToday.setHours(0, 0, 0, 0);
+  const icsEvents = store.events
+    .filter(e => { if (!e.date) return false; const d = new Date(e.date); d.setHours(0,0,0,0); return d >= icsToday; })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (icsEvents.length > 0) {
+    const icsContent = buildLocalICS(icsEvents);
+    const icsResult  = await pushICSToGitHub(icsContent);
+    if (icsResult.ok) {
+      showToastMsg("✅ Kalender aktualisiert");
+    } else if (icsResult.reason !== "kein_token") {
+      showToastMsg("⚠️ ICS Upload fehlgeschlagen: " + icsResult.reason);
+    }
+  }
+
+  // ── 2. jsPDF LAZY LADEN ───────────────────────────────────────
   if (!window.jspdf) {
     const script = document.createElement("script");
     script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-    script.onload  = () => generateEinladungPDF();
+    script.onload  = () => startPDFGeneration();
     script.onerror = () => showModal({
       title: "Fehler",
       text: "PDF-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.",
@@ -172,6 +188,10 @@ function generateEinladungPDF() {
     return;
   }
 
+  startPDFGeneration();
+}
+
+async function startPDFGeneration() {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) {
     showModal({ title: "Fehler", text: "PDF-Bibliothek nicht verfügbar.", onConfirm: () => {} });
@@ -179,12 +199,6 @@ function generateEinladungPDF() {
   }
 
   // ── Logos & Fonts laden ──────────────────────────────────────
-  // 🖼️ Einfach die Dateien in denselben Ordner wie index.html legen:
-  //    logo_fw.png   → FW-Wappen
-  //    logo_ffw.png  → FFW-Schild
-  //    DejaVuSans.ttf         → Font Regular
-  //    DejaVuSans-Bold.ttf    → Font Bold
-
   async function fileToBase64(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`${url} nicht gefunden (${res.status})`);
@@ -198,30 +212,24 @@ function generateEinladungPDF() {
     });
   }
 
-  async function loadFontsAndGenerate() {
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-    // Logos laden (bei Fehler: kein Logo, App läuft trotzdem)
-    let LOGO_FW = "", LOGO_FFW = "";
-    try { LOGO_FW  = await fileToBase64("logo_fw.png");  } catch { console.warn("logo_fw.png nicht gefunden");  }
-    try { LOGO_FFW = await fileToBase64("logo_ffw.png"); } catch { console.warn("logo_ffw.png nicht gefunden"); }
+  let LOGO_FW = "", LOGO_FFW = "";
+  try { LOGO_FW  = await fileToBase64("logo_fw.png");  } catch { console.warn("logo_fw.png nicht gefunden");  }
+  try { LOGO_FFW = await fileToBase64("logo_ffw.png"); } catch { console.warn("logo_ffw.png nicht gefunden"); }
 
-    // Fonts laden (bei Fehler: Fallback auf helvetica)
-    let fontName = "helvetica";
-    try {
-      const fontR = await fileToBase64("DejaVuSans.ttf");
-      const fontB = await fileToBase64("DejaVuSans-Bold.ttf");
-      doc.addFileToVFS("DejaVuSans.ttf",      fontR);
-      doc.addFont("DejaVuSans.ttf",      "DejaVuSans", "normal");
-      doc.addFileToVFS("DejaVuSans-Bold.ttf", fontB);
-      doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
-      fontName = "DejaVuSans";
-    } catch { console.warn("DejaVuSans nicht gefunden, Fallback: helvetica"); }
+  let fontName = "helvetica";
+  try {
+    const fontR = await fileToBase64("DejaVuSans.ttf");
+    const fontB = await fileToBase64("DejaVuSans-Bold.ttf");
+    doc.addFileToVFS("DejaVuSans.ttf",      fontR);
+    doc.addFont("DejaVuSans.ttf",      "DejaVuSans", "normal");
+    doc.addFileToVFS("DejaVuSans-Bold.ttf", fontB);
+    doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
+    fontName = "DejaVuSans";
+  } catch { console.warn("DejaVuSans nicht gefunden, Fallback: helvetica"); }
 
-    buildPDF(doc, fontName, LOGO_FW, LOGO_FFW);
-  }
-
-  loadFontsAndGenerate();
+  buildPDF(doc, fontName, LOGO_FW, LOGO_FFW);
 }
 
 /* =========================
@@ -495,27 +503,4 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   const activeBtn  = document.querySelector("#month-selector .allday-btn.active");
   const monthLabel = activeBtn ? activeBtn.textContent.replace(/\s+/g, "_") : "Einladung";
   doc.save("FW_Einladung_" + monthLabel + ".pdf");
-
-  // ── ICS GENERIEREN UND ZU GITHUB PUSHEN ──────────────────────
-  const icsToday = new Date(); icsToday.setHours(0, 0, 0, 0);
-  const icsEvents = store.events
-    .filter(function(e) {
-      if (!e.date) return false;
-      var d = new Date(e.date); d.setHours(0,0,0,0);
-      return d >= icsToday;
-    })
-    .sort(function(a, b) { return a.date.localeCompare(b.date); });
-
-  if (icsEvents.length > 0) {
-    const icsContent = buildLocalICS(icsEvents);
-    pushICSToGitHub(icsContent).then(function(result) {
-      if (result.ok) {
-        showToastMsg("✅ Kalender-Datei wurde aktualisiert");
-      } else if (result.reason === "kein_token") {
-        // Kein Token gesetzt — still ignorieren
-      } else {
-        showToastMsg("⚠️ ICS Upload fehlgeschlagen: " + result.reason);
-      }
-    });
-  }
 }
