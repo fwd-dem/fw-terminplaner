@@ -189,8 +189,7 @@ function setBottomBar(screen) {
 
   if (screen === "einladung") {
     buttons = [
-      { icon: "🏠", text: "Home",   action: () => showScreen("home") },
-      { icon: "↩️", text: "Zurück", action: () => showScreen("home") }
+      { icon: "🏠", text: "Home", action: () => showScreen("home") }
     ];
   }
 
