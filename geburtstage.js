@@ -3,20 +3,12 @@
 //
 //  Geburtstagsverwaltung: Mitglieder mit Geburtsmonat,
 //  Render, Export/Import als JSON.
-//  Abhängigkeiten: ui.js (showModal)
+//  Daten liegen in store.geburtstage (GitHub, privates Repo).
+//  Abhängigkeiten: config.js, api.js, github.js, ui.js
 // ============================================================
 
 const MONATE = ["Januar","Februar","März","April","Mai","Juni",
                 "Juli","August","September","Oktober","November","Dezember"];
-
-// Geburtstage aus localStorage laden
-function loadGeburtstage() {
-  return JSON.parse(localStorage.getItem("geburtstage") || "[]");
-}
-
-function saveGeburtstage(list) {
-  localStorage.setItem("geburtstage", JSON.stringify(list));
-}
 
 // Nachname extrahieren (letztes Wort) – für Sortierung
 function getNachname(name) {
@@ -24,8 +16,11 @@ function getNachname(name) {
   return parts[parts.length - 1].toLowerCase();
 }
 
-// Mitglied hinzufügen
-function addGeburtstag() {
+/* =========================
+   ➕ MITGLIED HINZUFÜGEN
+========================= */
+
+async function addGeburtstag() {
   const name  = document.getElementById("gb-name")?.value.trim();
   const monat = parseInt(document.getElementById("gb-monat")?.value);
 
@@ -38,35 +33,59 @@ function addGeburtstag() {
     return;
   }
 
-  const list = loadGeburtstage();
-  list.push({ id: crypto.randomUUID(), name, monat });
-  saveGeburtstage(list);
+  const eintrag = { id: crypto.randomUUID(), name, monat };
+  store.geburtstage.push(eintrag);
 
   document.getElementById("gb-name").value  = "";
   document.getElementById("gb-monat").value = "";
 
   renderGeburtstage();
+
+  showLoading(true);
+  const ok = await saveGeburtstageToGitHub();
+  showLoading(false);
+
+  if (!ok) {
+    // Rollback
+    store.geburtstage = store.geburtstage.filter(g => g.id !== eintrag.id);
+    renderGeburtstage();
+  }
 }
 
-// Mitglied löschen
+/* =========================
+   🗑️ MITGLIED LÖSCHEN
+========================= */
+
 function deleteGeburtstag(id) {
   showModal({
     title: "Mitglied löschen",
     text: "Diesen Eintrag wirklich löschen?",
-    onConfirm: () => {
-      const list = loadGeburtstage().filter(g => g.id !== id);
-      saveGeburtstage(list);
+    onConfirm: async () => {
+      const backup = [...store.geburtstage];
+      store.geburtstage = store.geburtstage.filter(g => g.id !== id);
       renderGeburtstage();
+
+      showLoading(true);
+      const ok = await saveGeburtstageToGitHub();
+      showLoading(false);
+
+      if (!ok) {
+        store.geburtstage = backup;
+        renderGeburtstage();
+      }
     }
   });
 }
 
-// Liste rendern — sortiert nach Nachname
+/* =========================
+   📋 RENDER
+========================= */
+
 function renderGeburtstage() {
   const container = document.getElementById("geburtstag-list");
   if (!container) return;
 
-  const list = loadGeburtstage().sort((a, b) =>
+  const list = [...store.geburtstage].sort((a, b) =>
     getNachname(a.name).localeCompare(getNachname(b.name), "de")
   );
 
@@ -80,7 +99,7 @@ function renderGeburtstage() {
                 padding:8px 0;border-bottom:1px solid #f0f0f0;">
       <div>
         <span style="font-size:14px;font-weight:500;">${g.name}</span>
-        <span style="font-size:12px;color:#888;margin-left:8px;">${MONATE[g.monat-1]}</span>
+        <span style="font-size:12px;color:#888;margin-left:8px;">${MONATE[g.monat - 1]}</span>
       </div>
       <button onclick="deleteGeburtstag('${g.id}')"
               style="width:auto;padding:4px 10px;font-size:12px;
@@ -91,31 +110,35 @@ function renderGeburtstage() {
   `).join("");
 }
 
-// Export als JSON
+/* =========================
+   📤 EXPORT
+========================= */
+
 function exportGeburtstage() {
-  const list = loadGeburtstage();
-  if (list.length === 0) {
+  if (store.geburtstage.length === 0) {
     showModal({ title: "Keine Einträge", text: "Es sind keine Geburtstage vorhanden.", onConfirm: () => {} });
     return;
   }
-  const blob = new Blob([JSON.stringify(list, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(store.geburtstage, null, 2)], { type: "application/json" });
   const url  = URL.createObjectURL(blob);
-  const date = new Date().toISOString().slice(0, 10);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = `fw-geburtstage-${date}.json`;
+  a.download = `fw-geburtstage-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-// Import aus JSON
+/* =========================
+   📥 IMPORT
+========================= */
+
 function importGeburtstage(event) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = "";
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     let imported;
     try {
       imported = JSON.parse(e.target.result);
@@ -135,18 +158,48 @@ function importGeburtstage(event) {
       return;
     }
 
-    const existing    = loadGeburtstage();
-    const existingIds = new Set(existing.map(g => g.id));
+    const existingIds = new Set(store.geburtstage.map(g => g.id));
     const newOnes     = valid.filter(g => !existingIds.has(g.id));
-    const merged      = [...existing, ...newOnes];
-    saveGeburtstage(merged);
-    renderGeburtstage();
 
-    const skipped = valid.length - newOnes.length;
-    const msg = skipped > 0
-      ? `${newOnes.length} hinzugefügt, ${skipped} bereits vorhanden (übersprungen).`
-      : `${newOnes.length} Einträge erfolgreich importiert.`;
-    showModal({ title: "Import abgeschlossen", text: msg, onConfirm: () => {} });
+    if (newOnes.length === 0) {
+      showModal({ title: "Nichts Neues", text: "Alle Einträge sind bereits vorhanden.", onConfirm: () => {} });
+      return;
+    }
+
+    showModal({
+      title: "Geburtstage importieren",
+      text: `${newOnes.length} neue Einträge werden importiert (${valid.length - newOnes.length} bereits vorhanden).`,
+      onConfirm: async () => {
+        const backup = [...store.geburtstage];
+
+        // Neue Einträge in den Store einfügen
+        newOnes.forEach(g => {
+          store.geburtstage.push({
+            id:    g.id || crypto.randomUUID(),
+            name:  g.name,
+            monat: g.monat
+          });
+        });
+
+        renderGeburtstage();
+
+        showLoading(true);
+        const ok = await saveGeburtstageToGitHub();
+        showLoading(false);
+
+        if (ok) {
+          const skipped = valid.length - newOnes.length;
+          const msg = skipped > 0
+            ? `${newOnes.length} hinzugefügt, ${skipped} bereits vorhanden (übersprungen).`
+            : `${newOnes.length} Einträge erfolgreich importiert.`;
+          showModal({ title: "Import abgeschlossen", text: msg, onConfirm: () => {} });
+        } else {
+          // Rollback
+          store.geburtstage = backup;
+          renderGeburtstage();
+        }
+      }
+    });
   };
   reader.readAsText(file);
 }
