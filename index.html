@@ -32,7 +32,7 @@
     <div class="card" onclick="showScreen('templates')">
       <h2>📚 Vorlagen</h2>
     </div>
-    <div class="card" onclick="showScreen('einladung-menu')">
+    <div class="card" onclick="openEinladung()">
       <h2>📄 Einladung</h2>
     </div>
     <div class="card" onclick="showScreen('einstellungen')">
@@ -288,19 +288,6 @@
   <div id="templateList"></div>
 </div>
 
-<!-- EINLADUNG MENU -->
-<div id="screen-einladung-menu" class="screen">
-  <h2>📄 Einladung</h2>
-  <div class="grid">
-    <div class="card primary" onclick="openEinladung()">
-      <h2>📄 Einladung erstellen</h2>
-    </div>
-    <div class="card" onclick="showScreen('geburtstage')">
-      <h2>🎂 Geburtstage verwalten</h2>
-    </div>
-  </div>
-</div>
-
 <!-- EINLADUNG -->
 <div id="screen-einladung" class="screen">
   <h2>📄 Einladung erstellen</h2>
@@ -414,6 +401,19 @@
 <!-- EINSTELLUNGEN -->
 <div id="screen-einstellungen" class="screen">
   <h2>⚙️ Einstellungen</h2>
+  <div class="grid">
+    <div class="card" onclick="showScreen('git-einstellungen')">
+      <h2>🔑 Git Einstellungen</h2>
+    </div>
+    <div class="card" onclick="showScreen('geburtstage')">
+      <h2>🎂 Geburtstage verwalten</h2>
+    </div>
+  </div>
+</div>
+
+<!-- GIT EINSTELLUNGEN -->
+<div id="screen-git-einstellungen" class="screen">
+  <h2>🔑 Git Einstellungen</h2>
 
   <div class="form-section">
     <label>🔑 GitHub Personal Access Token</label>

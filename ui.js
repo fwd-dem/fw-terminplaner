@@ -17,10 +17,10 @@ function showScreen(screen) {
 
   setHeaderTitle("FW Terminplaner");
 
-  if (screen === "events")       render();
+  if (screen === "events")        render();
   if (screen === "template-list") renderTemplates();
   if (screen === "geburtstage")   renderGeburtstage();
-  if (screen === "einstellungen") {
+  if (screen === "git-einstellungen") {
     const tokenEl = document.getElementById("gh-token");
     if (tokenEl) {
       tokenEl.value       = "";
@@ -28,7 +28,6 @@ function showScreen(screen) {
         ? "●●●●●●●●●●●● (gespeichert)"
         : "ghp_xxxxxxxxxxxx";
     }
-    // ICS-URL anzeigen
     const icsUrlEl = document.getElementById("ics-url");
     if (icsUrlEl) {
       icsUrlEl.textContent = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
@@ -193,29 +192,30 @@ function setBottomBar(screen) {
     ];
   }
 
-  if (screen === "einladung-menu") {
-    buttons = [
-      { icon: "🏠", text: "Home", action: () => showScreen("home") }
-    ];
-  }
-
   if (screen === "einladung") {
     buttons = [
-      { icon: "🏠", text: "Home",   action: () => showScreen("home")           },
-      { icon: "↩️", text: "Zurück", action: () => showScreen("einladung-menu") }
+      { icon: "🏠", text: "Home",   action: () => showScreen("home") },
+      { icon: "↩️", text: "Zurück", action: () => showScreen("home") }
     ];
   }
 
   if (screen === "geburtstage") {
     buttons = [
-      { icon: "🏠", text: "Home",   action: () => showScreen("home")           },
-      { icon: "↩️", text: "Zurück", action: () => showScreen("einladung-menu") }
+      { icon: "🏠", text: "Home",   action: () => showScreen("home")         },
+      { icon: "↩️", text: "Zurück", action: () => showScreen("einstellungen") }
     ];
   }
 
   if (screen === "einstellungen") {
     buttons = [
-      { icon: "🏠", text: "Home",      action: () => showScreen("home")       },
+      { icon: "🏠", text: "Home", action: () => showScreen("home") }
+    ];
+  }
+
+  if (screen === "git-einstellungen") {
+    buttons = [
+      { icon: "🏠", text: "Home",      action: () => showScreen("home")          },
+      { icon: "↩️", text: "Zurück",    action: () => showScreen("einstellungen") },
       { icon: "🔄", text: "Neu laden", action: () => {
           showLoading(true);
           loadAllData().finally(() => showLoading(false));
