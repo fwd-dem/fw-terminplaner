@@ -23,10 +23,13 @@ function showScreen(screen) {
   if (screen === "git-einstellungen") {
     const tokenEl = document.getElementById("gh-token");
     if (tokenEl) {
+      const hasToken = !!loadGithubToken();
       tokenEl.value       = "";
-      tokenEl.placeholder = loadGithubToken()
+      tokenEl.placeholder = hasToken
         ? "●●●●●●●●●●●● (gespeichert)"
         : "ghp_xxxxxxxxxxxx";
+      tokenEl.style.background = hasToken ? "#d4f5d4" : "#ffd6d6";
+      tokenEl.oninput = () => { tokenEl.style.background = "#eaeaea"; };
     }
     const icsUrlEl = document.getElementById("ics-url");
     if (icsUrlEl) {
