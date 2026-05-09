@@ -95,6 +95,20 @@ function setSaveButtonState(loading) {
   });
 }
 
+// Sperrt einen beliebigen Button per ID während eines async Saves
+function setButtonLoading(btnId, loading, loadingText = "Wird gespeichert…") {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled      = loading;
+  btn.style.opacity = loading ? "0.5" : "1";
+  if (loading) {
+    btn._originalText  = btn.textContent;
+    btn.textContent    = loadingText;
+  } else {
+    btn.textContent    = btn._originalText || btn.textContent;
+  }
+}
+
 /* =========================
    🪟 MODAL
 ========================= */

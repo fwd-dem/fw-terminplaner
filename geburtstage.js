@@ -38,15 +38,14 @@ async function addGeburtstag() {
 
   document.getElementById("gb-name").value  = "";
   document.getElementById("gb-monat").value = "";
-
   renderGeburtstage();
 
-  showLoading(true);
-  const ok = await saveGeburtstageToGitHub();
+  setButtonLoading("btn-gb-add", true, "⏳ Wird gespeichert…");
   showLoading(false);
+  const ok = await saveGeburtstageToGitHub();
+  setButtonLoading("btn-gb-add", false);
 
   if (!ok) {
-    // Rollback
     store.geburtstage = store.geburtstage.filter(g => g.id !== eintrag.id);
     renderGeburtstage();
   }
@@ -65,9 +64,9 @@ function deleteGeburtstag(id) {
       store.geburtstage = store.geburtstage.filter(g => g.id !== id);
       renderGeburtstage();
 
-      showLoading(true);
+      setButtonLoading("btn-gb-add", true, "⏳ Wird gespeichert…");
       const ok = await saveGeburtstageToGitHub();
-      showLoading(false);
+      setButtonLoading("btn-gb-add", false);
 
       if (!ok) {
         store.geburtstage = backup;
@@ -183,9 +182,9 @@ function importGeburtstage(event) {
 
         renderGeburtstage();
 
-        showLoading(true);
+        setButtonLoading("btn-gb-add", true, "⏳ Wird gespeichert…");
         const ok = await saveGeburtstageToGitHub();
-        showLoading(false);
+        setButtonLoading("btn-gb-add", false);
 
         if (ok) {
           const skipped = valid.length - newOnes.length;

@@ -9,6 +9,8 @@
    📚 TEMPLATES
 ========================= */
 
+let _tplSaving = false;  // verhindert gleichzeitige GitHub-Writes
+
 function openTemplateForm() {
   editTplIndex = null;
   showScreen("template-form");
@@ -16,6 +18,7 @@ function openTemplateForm() {
 }
 
 async function saveTemplate() {
+  if (_tplSaving) return;  // läuft bereits ein Save → ignorieren
   const tplIsAllDay = getCurrentTplEventType() === "allday";
   const tpl = {
     title:     document.getElementById("tpl_title").value,
@@ -41,9 +44,11 @@ async function saveTemplate() {
     store.templates.push(tpl);
   }
 
+  _tplSaving = true;
   showLoading(true);
   const ok = await saveTemplatesToGitHub();
   showLoading(false);
+  _tplSaving = false;
 
   if (ok) {
     showScreen("templates");
@@ -81,13 +86,16 @@ function deleteTemplate(i) {
     title: "Vorlage löschen",
     text: "Diese Vorlage wirklich löschen?",
     onConfirm: async () => {
+      if (_tplSaving) return;
       const backup = [...store.templates];
       store.templates.splice(i, 1);
       renderTemplates();
 
+      _tplSaving = true;
       showLoading(true);
       const ok = await saveTemplatesToGitHub();
       showLoading(false);
+      _tplSaving = false;
 
       if (!ok) {
         store.templates = backup;
@@ -360,9 +368,11 @@ async function applyImport(imported, mode) {
     }
   }
 
+  _tplSaving = true;
   showLoading(true);
   const ok = await saveTemplatesToGitHub();
   showLoading(false);
+  _tplSaving = false;
 
   if (ok) {
     renderTemplates();
