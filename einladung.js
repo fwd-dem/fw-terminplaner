@@ -352,8 +352,8 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   }
 
   function drawSection(iconType, iconColor, labelText, contentFn) {
-    const PAD_TOP    = 6;
-    const PAD_BOTTOM = 3;
+    const PAD_TOP    = 4;
+    const PAD_BOTTOM = 2;
     const LABEL_H    = 10;
 
     // Höhe messen auf Hilfsseite
