@@ -503,16 +503,14 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     doc.line(ix+3.2,  iy+2.6,  ix+3.2,  iy+3.2);
     doc.setLineWidth(0.45);
 
-    // Text + Link
+    // Unsichtbarer Link über den gesamten Block → Icon + Text klickbar
+    doc.link(0, y, W, icsBlockH, { url: icsUrl });
+
+    // Sichtbarer Text (nicht als Link — Link kommt vom Overlay oben)
     doc.setFontSize(LABEL_SIZE);
     doc.setFont(FONT, "bold");
     doc.setTextColor(...WHITE);
-    doc.textWithLink(
-      "Termine herunterladen",
-      margin + 6,
-      y + icsBlockH / 2 + 2,
-      { url: icsUrl }
-    );
+    doc.text("Termine herunterladen", margin + 6, y + icsBlockH / 2 + 2);
   }
   y += icsBlockH;
 
