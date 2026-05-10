@@ -477,7 +477,41 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     const activeMonthBtn = document.querySelector("#month-selector .allday-btn.active");
     const monatsname     = activeMonthBtn ? activeMonthBtn.textContent.split(" ")[0] : "";
     drawSection("cake", RED, "Geburtstage im " + monatsname, () => {
-      addParagraphs(geburtstag, { indent: 9 });
+      // Namen kommagetrennt, aber nie einen Namen umbrechen
+      const indent    = 9;
+      const maxW      = usable - indent;
+      const names     = geburtstag.split(",").map(n => n.trim()).filter(Boolean);
+      doc.setFontSize(CONTENT_SIZE);
+      doc.setFont(FONT, "normal");
+
+      let currentLine = "";
+      names.forEach((name, i) => {
+        const isLast   = i === names.length - 1;
+        const part     = isLast ? name : name + ",";
+        const testLine = currentLine ? currentLine + " " + part : part;
+        const testW    = doc.getTextWidth(testLine);
+
+        if (testW > maxW && currentLine !== "") {
+          // Aktuelle Zeile ausgeben, Name in neue Zeile
+          if (!measureOnly) {
+            doc.setTextColor(...DARK);
+            doc.text(clean(currentLine), margin + indent, y);
+          }
+          y += CONTENT_SIZE * 0.38 + 2;
+          currentLine = part;
+        } else {
+          currentLine = testLine;
+        }
+      });
+
+      // Letzte Zeile ausgeben
+      if (currentLine) {
+        if (!measureOnly) {
+          doc.setTextColor(...DARK);
+          doc.text(clean(currentLine), margin + indent, y);
+        }
+        y += CONTENT_SIZE * 0.38 + 4;
+      }
     });
   }
 
