@@ -315,8 +315,8 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
       const bgColor = zebraIdx % 2 === 0 ? BOX_W : BOX_A;
       doc.setFillColor(...bgColor);
       doc.rect(0, y, W, totalH, "F");
+      zebraIdx++;
     }
-    zebraIdx++;
     y += PAD_TOP;
 
     if (!measureOnly) {
