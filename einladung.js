@@ -397,29 +397,32 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     doc.setFillColor(...RED);
     doc.rect(0, 0, W, HEADER_H, "F");
 
-    if (LOGO_FW) {
-      doc.addImage(LOGO_FW, "PNG", margin, LOGO_Y, LOGO_H, LOGO_H);
-    }
-
-    if (LOGO_FFW) {
-      const L2_X = W - margin - LOGO_H;
-      doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, LOGO_H, LOGO_H);
-    }
-
-    // Text exakt zwischen den beiden Logos zentrieren
-    const textLeft   = margin + LOGO_H;
-    const textRight  = W - margin - LOGO_H;
-    const textCenterX = (textLeft + textRight) / 2;
-
+    // Textbreite messen um Textränder zu kennen
     doc.setFontSize(24);
     doc.setFont(FONT, "bold");
+    const titleW     = doc.getTextWidth("Blaulicht-Bladl");
+    const textLeft   = W / 2 - titleW / 2;
+    const textRight  = W / 2 + titleW / 2;
+
+    // Linkes Logo: Mitte zwischen x=0 und linkem Textrand
+    const L1_CX = textLeft / 2;
+    const L1_X  = L1_CX - LOGO_H / 2;
+
+    // Rechtes Logo: Mitte zwischen rechtem Textrand und x=W
+    const L2_CX = textRight + (W - textRight) / 2;
+    const L2_X  = L2_CX - LOGO_H / 2;
+
+    if (LOGO_FW)  doc.addImage(LOGO_FW,  "PNG", L1_X, LOGO_Y, LOGO_H, LOGO_H);
+    if (LOGO_FFW) doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, LOGO_H, LOGO_H);
+
+    // Text mittig auf der Seite
     doc.setTextColor(255, 255, 255);
-    doc.text("Blaulicht-Bladl", textCenterX, HEADER_H / 2 - 1, { align: "center" });
+    doc.text("Blaulicht-Bladl", W / 2, HEADER_H / 2 - 1, { align: "center" });
 
     doc.setFontSize(11);
     doc.setFont(FONT, "normal");
     doc.setTextColor(255, 210, 210);
-    doc.text("Monatsinfo der FW Demling", textCenterX, HEADER_H / 2 + 7, { align: "center" });
+    doc.text("Monatsinfo der FW Demling", W / 2, HEADER_H / 2 + 7, { align: "center" });
   }
 
   y = HEADER_H + 6;
