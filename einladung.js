@@ -390,8 +390,8 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
 
   // ── HEADER ───────────────────────────────────────────────────
   const HEADER_H = 36;
-  const LOGO_H   = 30;
-  const LOGO_Y   = (HEADER_H - LOGO_H) / 2;
+  const LOGO_H   = 36;
+  const LOGO_Y   = 0;
 
   if (!measureOnly) {
     doc.setFillColor(...RED);
@@ -406,9 +406,10 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
       doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, LOGO_H, LOGO_H);
     }
 
-    const textAreaLeft  = margin + (LOGO_FW ? LOGO_H + 3 : 0);
-    const textAreaRight = LOGO_FFW ? W - margin - LOGO_H * 0.72 - 3 : W - margin;
-    const textCenterX   = (textAreaLeft + textAreaRight) / 2;
+    // Text exakt zwischen den beiden Logos zentrieren
+    const textLeft   = margin + LOGO_H;
+    const textRight  = W - margin - LOGO_H;
+    const textCenterX = (textLeft + textRight) / 2;
 
     doc.setFontSize(24);
     doc.setFont(FONT, "bold");
