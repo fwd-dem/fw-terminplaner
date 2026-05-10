@@ -389,8 +389,8 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   }
 
   // ── HEADER ───────────────────────────────────────────────────
-  const HEADER_H = 36;
-  const LOGO_H   = 28;
+  const HEADER_H = 40;
+  const LOGO_H   = 32;
   const LOGO_Y   = (HEADER_H - LOGO_H) / 2;
 
   if (!measureOnly) {
@@ -402,9 +402,12 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     }
 
     if (LOGO_FFW) {
-      const L2_W = LOGO_H * 0.72;
+      // Schild ist Hochformat ca. 0.85 breit : 1 hoch
+      const L2_H = LOGO_H;
+      const L2_W = LOGO_H * 0.85;
       const L2_X = W - margin - L2_W;
-      doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, L2_W, LOGO_H);
+      const L2_Y = (HEADER_H - L2_H) / 2;
+      doc.addImage(LOGO_FFW, "PNG", L2_X, L2_Y, L2_W, L2_H);
     }
 
     const textAreaLeft  = margin + (LOGO_FW ? LOGO_H + 3 : 0);
