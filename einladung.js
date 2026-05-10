@@ -309,30 +309,32 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     y = savedY;
     measureOnly = wasMeasuring;
 
-    const totalH  = PAD_TOP + LABEL_H + contentH + PAD_BOTTOM;
-    const startY  = y;
+    const totalH = PAD_TOP + LABEL_H + contentH + PAD_BOTTOM;
+    const startY = y;
 
     if (!measureOnly) {
       const bgColor = zebraIdx % 2 === 0 ? BOX_W : BOX_A;
       doc.setFillColor(...bgColor);
       doc.rect(0, startY, W, totalH, "F");
       zebraIdx++;
+    }
 
-      // Label + Icon
-      const labelY = startY + PAD_TOP + LABEL_H * 0.7;
-      if (iconType) drawIcon(iconType, margin, startY + PAD_TOP - 0.5, iconColor || RED);
+    y = startY + PAD_TOP;
+
+    if (!measureOnly) {
+      if (iconType) drawIcon(iconType, margin, y - 0.5, iconColor || RED);
       doc.setFontSize(LABEL_SIZE);
       doc.setFont(FONT, "bold");
       doc.setTextColor(...(iconColor || RED));
-      doc.text(clean(labelText), margin + (iconType ? 6 : 0), labelY);
+      doc.text(clean(labelText), margin + (iconType ? 6 : 0), y + 3.5);
     }
 
-    // y auf Inhaltsposition setzen und contentFn zeichnen
     y = startY + PAD_TOP + LABEL_H;
+
     if (!measureOnly) doc.setTextColor(...DARK);
     contentFn();
 
-    // y exakt auf Ende der Box setzen
+    // y exakt auf Ende der Box setzen — ignoriert was contentFn mit y gemacht hat
     y = startY + totalH;
   }
 
