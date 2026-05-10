@@ -198,7 +198,6 @@ async function startPDFGeneration() {
     return;
   }
 
-  // ── Logos & Fonts laden ──────────────────────────────────────
   async function fileToBase64(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`${url} nicht gefunden (${res.status})`);
@@ -212,79 +211,122 @@ async function startPDFGeneration() {
     });
   }
 
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-
   let LOGO_FW = "", LOGO_FFW = "";
   try { LOGO_FW  = await fileToBase64("logo_fw.png");  } catch { console.warn("logo_fw.png nicht gefunden");  }
   try { LOGO_FFW = await fileToBase64("logo_ffw.png"); } catch { console.warn("logo_ffw.png nicht gefunden"); }
 
   let fontName = "helvetica";
+  let fontR = "", fontB = "";
   try {
-    const fontR = await fileToBase64("DejaVuSans.ttf");
-    const fontB = await fileToBase64("DejaVuSans-Bold.ttf");
-    doc.addFileToVFS("DejaVuSans.ttf",      fontR);
-    doc.addFont("DejaVuSans.ttf",      "DejaVuSans", "normal");
-    doc.addFileToVFS("DejaVuSans-Bold.ttf", fontB);
-    doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
+    fontR = await fileToBase64("DejaVuSans.ttf");
+    fontB = await fileToBase64("DejaVuSans-Bold.ttf");
     fontName = "DejaVuSans";
   } catch { console.warn("DejaVuSans nicht gefunden, Fallback: helvetica"); }
 
-  buildPDF(doc, fontName, LOGO_FW, LOGO_FFW);
+  function loadFonts(doc) {
+    if (fontName === "DejaVuSans") {
+      doc.addFileToVFS("DejaVuSans.ttf",      fontR);
+      doc.addFont("DejaVuSans.ttf",      "DejaVuSans", "normal");
+      doc.addFileToVFS("DejaVuSans-Bold.ttf", fontB);
+      doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
+    }
+  }
+
+  // ── SCHRITT 1: Höhe messen auf Dummy-Dokument ─────────────────
+  const dummy = new jsPDF({ unit: "mm", format: [160, 500] });
+  loadFonts(dummy);
+  const measuredH = buildPDF(dummy, fontName, LOGO_FW, LOGO_FFW, true);
+
+  // ── SCHRITT 2: Echtes Dokument mit gemessener Höhe ────────────
+  const finalH = measuredH + 10;
+  const real   = new jsPDF({ unit: "mm", format: [160, finalH] });
+  loadFonts(real);
+  buildPDF(real, fontName, LOGO_FW, LOGO_FFW, false);
+
+  const activeBtn  = document.querySelector("#month-selector .allday-btn.active");
+  const monthLabel = activeBtn ? activeBtn.textContent.replace(/\s+/g, "_") : "Einladung";
+  real.save("FW_Einladung_" + monthLabel + ".pdf");
 }
 
 /* =========================
    🏗️ PDF INHALT AUFBAUEN
 ========================= */
 
-function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
-  const W      = 210;
-  const margin = 18;
+function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
+  const W      = 160;
+  const margin = 10;
   const usable = W - margin * 2;
-  let   y      = margin;
+  let   y      = 0;
   const RED    = [211, 47, 47];
   const BLUE   = [26, 80, 180];
   const DARK   = [30, 30, 30];
   const GREY   = [130, 130, 130];
+  const WHITE  = [255, 255, 255];
   const BOX_A  = [245, 245, 245];
   const BOX_W  = [255, 255, 255];
   let   zebraIdx = 0;
+
+  const PAD_TOP      = 8;
+  const PAD_BOTTOM   = 5;
+  const LABEL_H      = 13;
+  const CONTENT_SIZE = 13;
+  const LABEL_SIZE   = 14;
 
   function clean(text) {
     return (text || "").replace(/[^\x00-\xFF]/g, "").trim();
   }
 
   function addText(text, opts = {}) {
-    const { size = 14, bold = false, color = DARK, indent = 0, after = 3 } = opts;
+    const { size = CONTENT_SIZE, bold = false, color = DARK, indent = 0, after = 4 } = opts;
     doc.setFontSize(size);
     doc.setFont(FONT, bold ? "bold" : "normal");
     doc.setTextColor(...color);
     const lines = doc.splitTextToSize(clean(text), usable - indent);
-    doc.text(lines, margin + indent, y);
+    if (!measureOnly) doc.text(lines, margin + indent, y);
     y += lines.length * (size * 0.38) + after;
   }
 
   function addParagraphs(text, opts = {}) {
-    const { size = 14, bold = false, color = DARK, indent = 0,
-            lineAfter = 1, paraAfter = 3 } = opts;
+    const { size = CONTENT_SIZE, color = DARK, indent = 0, paraAfter = 4 } = opts;
     const paragraphs = clean(text).split("\n").filter(p => p.trim() !== "");
     paragraphs.forEach((para, i) => {
       doc.setFontSize(size);
-      doc.setFont(FONT, bold ? "bold" : "normal");
+      doc.setFont(FONT, "normal");
       doc.setTextColor(...color);
       const lines = doc.splitTextToSize(para.trim(), usable - indent);
-      doc.text(lines, margin + indent, y);
-      y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : lineAfter);
+      if (!measureOnly) doc.text(lines, margin + indent, y);
+      y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : 2);
     });
   }
 
-  function measureText(text, size, indent) {
-    doc.setFontSize(size);
-    const lines = doc.splitTextToSize(clean(text), usable - (indent || 0));
-    return lines.length * (size * 0.38) + 3;
-  }
+  function drawSection(iconType, iconColor, labelText, contentFn) {
+    const savedY = y;
+    contentFn();
+    const contentH = y - savedY;
+    y = savedY;
 
-  function checkPageBreak(needed = 25) {
-    if (y + needed > 277) { doc.addPage(); y = margin; zebraIdx = 0; }
+    const totalH = PAD_TOP + LABEL_H + contentH + PAD_BOTTOM;
+
+    if (!measureOnly) {
+      const bgColor = zebraIdx % 2 === 0 ? BOX_W : BOX_A;
+      doc.setFillColor(...bgColor);
+      doc.rect(0, y, W, totalH, "F");
+    }
+    zebraIdx++;
+    y += PAD_TOP;
+
+    if (!measureOnly) {
+      if (iconType) drawIcon(iconType, margin, y - 0.5, iconColor || RED);
+      doc.setFontSize(LABEL_SIZE);
+      doc.setFont(FONT, "bold");
+      doc.setTextColor(...(iconColor || RED));
+      doc.text(clean(labelText), margin + (iconType ? 6 : 0), y + 3.5);
+    }
+    y += LABEL_H;
+
+    if (!measureOnly) doc.setTextColor(...DARK);
+    contentFn();
+    y += PAD_BOTTOM;
   }
 
   function drawIcon(type, ix, iy, color) {
@@ -321,15 +363,6 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
         doc.line(ix+1.75,iy+1.7,ix+1.75,iy+2.9);
         doc.circle(ix+1.75,iy+1.15,0.28,"F");
         doc.setLineWidth(0.45); break;
-      case "download":
-        doc.line(ix+1.75,iy+0.3, ix+1.75,iy+2.3);
-        doc.line(ix+0.85,iy+1.5, ix+1.75,iy+2.3);
-        doc.line(ix+2.65,iy+1.5, ix+1.75,iy+2.3);
-        doc.line(ix+0.3, iy+3.2, ix+3.2, iy+3.2);
-        doc.setLineWidth(0.35);
-        doc.line(ix+0.3,iy+2.6,ix+0.3,iy+3.2);
-        doc.line(ix+3.2,iy+2.6,ix+3.2,iy+3.2);
-        doc.setLineWidth(0.45); break;
       case "star":
         const cx=ix+1.75,cy=iy+1.9,or=1.7,ir=0.75,sp=[];
         for(let k=0;k<10;k++){const a=(k*Math.PI/5)-Math.PI/2;sp.push([cx+Math.cos(a)*(k%2===0?or:ir),cy+Math.sin(a)*(k%2===0?or:ir)]);}
@@ -351,93 +384,56 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
     }
   }
 
-  function drawSection(iconType, iconColor, labelText, contentFn) {
-    const PAD_TOP    = 5;
-    const PAD_BOTTOM = 1;
-    const LABEL_H    = 10;
-
-    // Höhe messen auf Hilfsseite
-    const savedY    = y;
-    const savedPage = doc.internal.getCurrentPageInfo().pageNumber;
-    doc.addPage();
-    y = 10;
-    doc.setTextColor(255, 255, 255);
-    contentFn();
-    const contentH = y - 10;
-    doc.deletePage(doc.internal.getNumberOfPages());
-    y = savedY;
-
-    const totalH = PAD_TOP + LABEL_H + contentH + PAD_BOTTOM;
-
-    checkPageBreak(totalH + 2);
-
-    const bgColor = zebraIdx % 2 === 0 ? BOX_W : BOX_A;
-    zebraIdx++;
-    doc.setFillColor(...bgColor);
-    doc.rect(0, y, W, totalH, "F");
-
-    y += PAD_TOP;
-    if (iconType) drawIcon(iconType, margin, y - 0.5, iconColor || RED);
-    doc.setFontSize(14);
-    doc.setFont(FONT, "bold");
-    doc.setTextColor(...(iconColor || RED));
-    doc.text(clean(labelText), margin + (iconType ? 5.5 : 0), y + 3.2);
-    y += LABEL_H;
-
-    doc.setTextColor(...DARK);
-    contentFn();
-
-    y += PAD_BOTTOM;
-  }
-
   // ── HEADER ───────────────────────────────────────────────────
-  const HEADER_H = 44;
-  const LOGO_H   = 36;
+  const HEADER_H = 36;
+  const LOGO_H   = 28;
   const LOGO_Y   = (HEADER_H - LOGO_H) / 2;
 
-  doc.setFillColor(...RED);
-  doc.rect(0, 0, W, HEADER_H, "F");
+  if (!measureOnly) {
+    doc.setFillColor(...RED);
+    doc.rect(0, 0, W, HEADER_H, "F");
 
-  if (LOGO_FW) {
-    const L1_CX = margin + LOGO_H / 2;
-    const L1_CY = HEADER_H / 2;
-    doc.setFillColor(255, 255, 255);
-    doc.circle(L1_CX, L1_CY, LOGO_H / 2 + 1, "F");
-    doc.addImage(LOGO_FW, "PNG", margin, LOGO_Y, LOGO_H, LOGO_H);
+    if (LOGO_FW) {
+      const L1_CX = margin + LOGO_H / 2;
+      const L1_CY = HEADER_H / 2;
+      doc.setFillColor(255, 255, 255);
+      doc.circle(L1_CX, L1_CY, LOGO_H / 2 + 1, "F");
+      doc.addImage(LOGO_FW, "PNG", margin, LOGO_Y, LOGO_H, LOGO_H);
+    }
+
+    if (LOGO_FFW) {
+      const L2_W = LOGO_H * 0.72;
+      const L2_X = W - margin - L2_W;
+      doc.setFillColor(255, 255, 255);
+      doc.rect(L2_X - 1, LOGO_Y - 0.5, L2_W + 2, LOGO_H + 1, "F");
+      doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, L2_W, LOGO_H);
+    }
+
+    const textAreaLeft  = margin + (LOGO_FW ? LOGO_H + 3 : 0);
+    const textAreaRight = LOGO_FFW ? W - margin - LOGO_H * 0.72 - 3 : W - margin;
+    const textCenterX   = (textAreaLeft + textAreaRight) / 2;
+
+    doc.setFontSize(24);
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Blaulicht-Bladl", textCenterX, HEADER_H / 2 - 1, { align: "center" });
+
+    doc.setFontSize(11);
+    doc.setFont(FONT, "normal");
+    doc.setTextColor(255, 210, 210);
+    doc.text("Monatsinfo der FW Demling", textCenterX, HEADER_H / 2 + 7, { align: "center" });
   }
 
-  if (LOGO_FFW) {
-    const L2_W = LOGO_H * 0.72;
-    const L2_X = W - margin - L2_W;
-    doc.setFillColor(255, 255, 255);
-    doc.rect(L2_X - 1, LOGO_Y - 0.5, L2_W + 2, LOGO_H + 1, "F");
-    doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, L2_W, LOGO_H);
-  }
-
-  const textAreaLeft  = margin + (LOGO_FW ? LOGO_H + 4 : 0);
-  const textAreaRight = LOGO_FFW ? W - margin - LOGO_H * 0.72 - 4 : W - margin;
-  const textCenterX   = (textAreaLeft + textAreaRight) / 2;
-
-  doc.setFontSize(24);
-  doc.setFont(FONT, "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text("Blaulicht-Bladl", textCenterX, HEADER_H / 2 - 2, { align: "center" });
-
-  doc.setFontSize(14);
-  doc.setFont(FONT, "normal");
-  doc.setTextColor(255, 210, 210);
-  doc.text("Monatsinfo der FW Demling", textCenterX, HEADER_H / 2 + 7, { align: "center" });
-
-  y = HEADER_H + 8;
+  y = HEADER_H + 6;
 
   // ── ÜBUNGSTERMINE ─────────────────────────────────────────────
   const wannEl   = document.getElementById("einladung-wann");
   const wannRows = wannEl ? wannEl.querySelectorAll(".einladung-wann-row") : [];
   drawSection("calendar_lines", RED, "Übungstermine", () => {
     if (wannRows.length === 0) {
-      addText("Keine Termine eingetragen", { size: 12, color: GREY, indent: 9, after: 1 });
+      addText("Keine Termine eingetragen", { color: GREY, indent: 9, after: 1 });
     } else {
-      wannRows.forEach(row => addText(row.textContent.trim(), { size: 14, indent: 9, after: 3 }));
+      wannRows.forEach(row => addText(row.textContent.trim(), { indent: 9 }));
     }
   });
 
@@ -445,20 +441,20 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   const thema = document.getElementById("einladung-thema")?.value.trim();
   if (thema) {
     drawSection("bullet_list", RED, "Übungsthemen", () => {
-      addParagraphs(thema, { size: 14, indent: 9 });
+      addParagraphs(thema, { indent: 9 });
     });
   }
 
   // ── ORT ───────────────────────────────────────────────────────
   drawSection("pin", RED, "Ort", () => {
-    addText("Feuerwehrgerätehaus (FWGH)", { size: 14, indent: 9, after: 3 });
+    addText("Feuerwehrgerätehaus (FWGH)", { indent: 9 });
   });
 
   // ── WEITERE INFORMATIONEN ─────────────────────────────────────
   const info = document.getElementById("einladung-info")?.value.trim();
   if (info) {
     drawSection("info", RED, "Weitere Informationen", () => {
-      addParagraphs(info, { size: 14, indent: 9 });
+      addParagraphs(info, { indent: 9 });
     });
   }
 
@@ -466,19 +462,9 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   const hinweis = document.getElementById("einladung-hinweis")?.value.trim();
   if (hinweis) {
     drawSection("star", RED, "Hinweis", () => {
-      addParagraphs(hinweis, { size: 14, indent: 9 });
+      addParagraphs(hinweis, { indent: 9 });
     });
   }
-
-  // ── KALENDER ABONNIEREN ───────────────────────────────────────
-  drawSection("download", BLUE, "Termine herunterladen", () => {
-    const icsUrl = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
-    doc.setFontSize(14);
-    doc.setFont(FONT, "normal");
-    doc.setTextColor(...BLUE);
-    doc.textWithLink("Hier klicken zum Herunterladen", margin + 5.5, y, { url: icsUrl });
-    y += 9;
-  });
 
   // ── GEBURTSTAGSKINDER ─────────────────────────────────────────
   const geburtstag = document.getElementById("einladung-geburtstag")?.value.trim();
@@ -486,21 +472,37 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW) {
   if (geburtstag && gbBlockEl && gbBlockEl.style.display !== "none") {
     const activeMonthBtn = document.querySelector("#month-selector .allday-btn.active");
     const monatsname     = activeMonthBtn ? activeMonthBtn.textContent.split(" ")[0] : "";
-    drawSection("cake", RED, "Wir gratulieren zum Geburtstag im " + monatsname, () => {
-      addParagraphs(geburtstag, { size: 14, indent: 9 });
+    drawSection("cake", RED, "Geburtstage im " + monatsname, () => {
+      addParagraphs(geburtstag, { indent: 9 });
     });
   }
 
+  // ── KALENDER ABONNIEREN (auffälliger blauer Block) ────────────
+  const icsUrl    = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
+  const icsBlockH = 22;
+  if (!measureOnly) {
+    doc.setFillColor(...BLUE);
+    doc.rect(0, y, W, icsBlockH, "F");
+    doc.setFontSize(13);
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("Termine herunterladen", W / 2, y + 8, { align: "center" });
+    doc.setFontSize(10);
+    doc.setFont(FONT, "normal");
+    doc.setTextColor(200, 220, 255);
+    doc.textWithLink(icsUrl, W / 2, y + 15, { align: "center", url: icsUrl });
+  }
+  y += icsBlockH;
+
   // ── FOOTER ────────────────────────────────────────────────────
   y += 8;
-  checkPageBreak(15);
-  doc.setFontSize(11);
-  doc.setFont(FONT, "bold");
-  doc.setTextColor(...DARK);
-  doc.text("1. Kommandant / 1. Vorstand", margin, y);
+  if (!measureOnly) {
+    doc.setFontSize(12);
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(...DARK);
+    doc.text("1. Kommandant / 1. Vorstand", margin, y);
+  }
+  y += 8;
 
-  // ── SPEICHERN ─────────────────────────────────────────────────
-  const activeBtn  = document.querySelector("#month-selector .allday-btn.active");
-  const monthLabel = activeBtn ? activeBtn.textContent.replace(/\s+/g, "_") : "Einladung";
-  doc.save("FW_Einladung_" + monthLabel + ".pdf");
+  return y;
 }
