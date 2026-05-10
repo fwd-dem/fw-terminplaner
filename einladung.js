@@ -267,7 +267,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   let   zebraIdx = 0;
 
   const PAD_TOP      = 8;
-  const PAD_BOTTOM   = 5;
+  const PAD_BOTTOM   = 2;
   const LABEL_H      = 13;
   const CONTENT_SIZE = 13;
   const LABEL_SIZE   = 14;
@@ -481,21 +481,38 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     });
   }
 
-  // ── KALENDER ABONNIEREN (auffälliger blauer Block) ────────────
+  // ── KALENDER HERUNTERLADEN (blauer Block, klickbar) ──────────
   const icsUrl    = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
-  const icsBlockH = 26;
+  const icsBlockH = 18;
   if (!measureOnly) {
     doc.setFillColor(...BLUE);
     doc.rect(0, y, W, icsBlockH, "F");
-    doc.setFontSize(13);
+
+    // Download-Icon (gleicher Stil wie andere Sektions-Icons, aber weiß)
+    const ix = margin;
+    const iy = y + (icsBlockH / 2) - 2.5;
+    doc.setDrawColor(...WHITE);
+    doc.setFillColor(...WHITE);
+    doc.setLineWidth(0.45);
+    doc.line(ix+1.75, iy+0.3,  ix+1.75, iy+2.3);
+    doc.line(ix+0.85, iy+1.5,  ix+1.75, iy+2.3);
+    doc.line(ix+2.65, iy+1.5,  ix+1.75, iy+2.3);
+    doc.line(ix+0.3,  iy+3.2,  ix+3.2,  iy+3.2);
+    doc.setLineWidth(0.35);
+    doc.line(ix+0.3,  iy+2.6,  ix+0.3,  iy+3.2);
+    doc.line(ix+3.2,  iy+2.6,  ix+3.2,  iy+3.2);
+    doc.setLineWidth(0.45);
+
+    // Text + Link
+    doc.setFontSize(LABEL_SIZE);
     doc.setFont(FONT, "bold");
     doc.setTextColor(...WHITE);
-    doc.text("Termine herunterladen", W / 2, y + 8, { align: "center" });
-    doc.setFontSize(8);
-    doc.setFont(FONT, "normal");
-    doc.setTextColor(200, 220, 255);
-    const icsLines = doc.splitTextToSize(icsUrl, W - 8);
-    doc.textWithLink(icsLines.join("\n"), W / 2, y + 16, { align: "center", url: icsUrl });
+    doc.textWithLink(
+      "Termine herunterladen",
+      margin + 6,
+      y + icsBlockH / 2 + 2,
+      { url: icsUrl }
+    );
   }
   y += icsBlockH;
 
