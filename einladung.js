@@ -398,18 +398,12 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     doc.rect(0, 0, W, HEADER_H, "F");
 
     if (LOGO_FW) {
-      const L1_CX = margin + LOGO_H / 2;
-      const L1_CY = HEADER_H / 2;
-      doc.setFillColor(255, 255, 255);
-      doc.circle(L1_CX, L1_CY, LOGO_H / 2 + 1, "F");
       doc.addImage(LOGO_FW, "PNG", margin, LOGO_Y, LOGO_H, LOGO_H);
     }
 
     if (LOGO_FFW) {
       const L2_W = LOGO_H * 0.72;
       const L2_X = W - margin - L2_W;
-      doc.setFillColor(255, 255, 255);
-      doc.rect(L2_X - 1, LOGO_Y - 0.5, L2_W + 2, LOGO_H + 1, "F");
       doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, L2_W, LOGO_H);
     }
 
