@@ -336,6 +336,13 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
 
     // y exakt auf Ende der Box setzen — ignoriert was contentFn mit y gemacht hat
     y = startY + totalH;
+
+    // Kleiner weißer Trennstreifen zwischen Boxen
+    if (!measureOnly) {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, y, W, 2, "F");
+    }
+    y += 2;
   }
 
   function drawIcon(type, ix, iy, color) {
