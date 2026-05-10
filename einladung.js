@@ -300,10 +300,14 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   }
 
   function drawSection(iconType, iconColor, labelText, contentFn) {
+    // Höhe messen — temporär measureOnly aktivieren
+    const wasMeasuring = measureOnly;
+    measureOnly = true;
     const savedY = y;
     contentFn();
     const contentH = y - savedY;
     y = savedY;
+    measureOnly = wasMeasuring;
 
     const totalH = PAD_TOP + LABEL_H + contentH + PAD_BOTTOM;
 
@@ -479,7 +483,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
 
   // ── KALENDER ABONNIEREN (auffälliger blauer Block) ────────────
   const icsUrl    = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
-  const icsBlockH = 22;
+  const icsBlockH = 26;
   if (!measureOnly) {
     doc.setFillColor(...BLUE);
     doc.rect(0, y, W, icsBlockH, "F");
@@ -487,10 +491,11 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     doc.setFont(FONT, "bold");
     doc.setTextColor(...WHITE);
     doc.text("Termine herunterladen", W / 2, y + 8, { align: "center" });
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setFont(FONT, "normal");
     doc.setTextColor(200, 220, 255);
-    doc.textWithLink(icsUrl, W / 2, y + 15, { align: "center", url: icsUrl });
+    const icsLines = doc.splitTextToSize(icsUrl, W - 8);
+    doc.textWithLink(icsLines.join("\n"), W / 2, y + 16, { align: "center", url: icsUrl });
   }
   y += icsBlockH;
 
