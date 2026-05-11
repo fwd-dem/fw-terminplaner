@@ -83,9 +83,9 @@ function fillEinladung(year, month) {
     .filter(e => e.category === "active")
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Verein-Termine chronologisch
-  const clubEvents = monthEvents
-    .filter(e => e.category === "club")
+  // Alle Nicht-Aktive Termine chronologisch
+  const infoEvents = monthEvents
+    .filter(e => e.category !== "active")
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // ── Wann ──────────────────────────────────────────────────────
@@ -113,19 +113,20 @@ function fillEinladung(year, month) {
     themaEl.value = themen.join("\n") || "";
   }
 
-  // ── Weitere Informationen: Verein-Termine ────────────────────
+  // ── Weitere Informationen: alle Nicht-Aktive Termine ─────────
   const infoEl = document.getElementById("einladung-info");
   if (infoEl) {
-    if (clubEvents.length === 0) {
+    if (infoEvents.length === 0) {
       infoEl.value = "";
     } else {
-      infoEl.value = clubEvents.map(e => {
+      infoEl.value = infoEvents.map(e => {
         const datStr = new Date(e.date).toLocaleDateString("de-DE", {
           weekday: "long", day: "numeric", month: "long"
         });
         const time  = e.start ? ` ${e.start} Uhr` : "";
-        const titel = e.title ? ` – ${e.title}` : "";
-        return `• ${datStr}${time}${titel}`;
+        const titel = e.title ? ` ${e.title}` : "";
+        const desc  = e.desc && e.desc.trim() ? ` – ${e.desc.trim()}` : "";
+        return `• ${datStr}${time}${titel}${desc}`;
       }).join("\n");
     }
   }
@@ -287,15 +288,32 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   }
 
   function addParagraphs(text, opts = {}) {
-    const { size = CONTENT_SIZE, color = DARK, indent = 0, paraAfter = 4 } = opts;
+    const { size = CONTENT_SIZE, color = DARK, indent = 0, paraAfter = 4, bullets = false } = opts;
     const paragraphs = clean(text).split("\n").filter(p => p.trim() !== "");
+    const useBullets = bullets && paragraphs.length > 1;
+    const bulletW    = useBullets ? 5 : 0;  // 3.5mm Flamme + 1.5mm Abstand
+
     paragraphs.forEach((para, i) => {
       doc.setFontSize(size);
       doc.setFont(FONT, "normal");
       doc.setTextColor(...color);
-      const lines = doc.splitTextToSize(para.trim(), usable - indent);
-      if (!measureOnly) doc.text(lines, margin + indent, y);
-      y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : 2);
+
+      if (useBullets) {
+        // Flammen-Bullet via icons.js
+        const lines = doc.splitTextToSize(para.trim(), usable - indent - bulletW);
+        if (!measureOnly) {
+          drawIcon(doc, "flame", margin + indent, y - 2.5, color);
+          doc.setFontSize(size);
+          doc.setFont(FONT, "normal");
+          doc.setTextColor(...color);
+          doc.text(lines, margin + indent + bulletW, y);
+        }
+        y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : 2);
+      } else {
+        const lines = doc.splitTextToSize(para.trim(), usable - indent);
+        if (!measureOnly) doc.text(lines, margin + indent, y);
+        y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : 2);
+      }
     });
   }
 
@@ -322,7 +340,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     y = startY + PAD_TOP;
 
     if (!measureOnly) {
-      if (iconType) drawIcon(iconType, margin, y - 0.5, iconColor || RED);
+      if (iconType) drawIcon(doc, iconType, margin, y - 0.5, iconColor || RED);
       doc.setFontSize(LABEL_SIZE);
       doc.setFont(FONT, "bold");
       doc.setTextColor(...(iconColor || RED));
@@ -336,61 +354,6 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
 
     // y exakt auf Ende der Box setzen — ignoriert was contentFn mit y gemacht hat
     y = startY + totalH;
-  }
-
-  function drawIcon(type, ix, iy, color) {
-    const [r,g,b] = color;
-    doc.setDrawColor(r,g,b);
-    doc.setFillColor(r,g,b);
-    doc.setLineWidth(0.45);
-    switch(type) {
-      case "calendar_lines":
-        doc.roundedRect(ix, iy+0.3, 3.5, 3.2, 0.25, 0.25, "S");
-        doc.setLineWidth(0.3);
-        doc.line(ix+0.7,iy+0,  ix+0.7,iy+0.9);
-        doc.line(ix+2.8,iy+0,  ix+2.8,iy+0.9);
-        doc.line(ix,    iy+1.2,ix+3.5,iy+1.2);
-        doc.line(ix+0.4,iy+1.9,ix+3.1,iy+1.9);
-        doc.line(ix+0.4,iy+2.6,ix+2.2,iy+2.6);
-        doc.setLineWidth(0.45); break;
-      case "pin":
-        doc.circle(ix+1.75,iy+1.4,1.3,"S");
-        doc.circle(ix+1.75,iy+1.4,0.45,"F");
-        doc.lines([[0.6,0.8],[0.0,0.8],[-0.6,0.8],[-0.6,-0.8],[-0.5,-0.5]],ix+1.15,iy+1.9,[1,1],"S"); break;
-      case "bullet_list":
-        doc.circle(ix+0.4,iy+0.8,0.35,"F");
-        doc.circle(ix+0.4,iy+2.1,0.35,"F");
-        doc.circle(ix+0.4,iy+3.2,0.35,"F");
-        doc.setLineWidth(0.35);
-        doc.line(ix+1.0,iy+0.8,ix+3.5,iy+0.8);
-        doc.line(ix+1.0,iy+2.1,ix+3.0,iy+2.1);
-        doc.line(ix+1.0,iy+3.2,ix+2.5,iy+3.2);
-        doc.setLineWidth(0.45); break;
-      case "info":
-        doc.circle(ix+1.75,iy+1.75,1.75,"S");
-        doc.setLineWidth(0.5);
-        doc.line(ix+1.75,iy+1.7,ix+1.75,iy+2.9);
-        doc.circle(ix+1.75,iy+1.15,0.28,"F");
-        doc.setLineWidth(0.45); break;
-      case "star":
-        const cx=ix+1.75,cy=iy+1.9,or=1.7,ir=0.75,sp=[];
-        for(let k=0;k<10;k++){const a=(k*Math.PI/5)-Math.PI/2;sp.push([cx+Math.cos(a)*(k%2===0?or:ir),cy+Math.sin(a)*(k%2===0?or:ir)]);}
-        doc.moveTo(sp[0][0],sp[0][1]);sp.slice(1).forEach(p=>doc.lineTo(p[0],p[1]));doc.lineTo(sp[0][0],sp[0][1]);doc.stroke(); break;
-      case "cake":
-        doc.setLineWidth(0.3);
-        doc.rect(ix+1.45, iy+0.0, 0.6, 1.4, "F");
-        doc.setFillColor(255, 200, 0);
-        doc.ellipse(ix+1.75, iy-0.2, 0.35, 0.5, "F");
-        doc.setFillColor(r,g,b);
-        doc.roundedRect(ix+0.3, iy+1.4, 3.0, 1.1, 0.2, 0.2, "F");
-        doc.roundedRect(ix+0.0, iy+2.5, 3.5, 1.3, 0.2, 0.2, "F");
-        doc.setDrawColor(255,255,255);
-        doc.setLineWidth(0.35);
-        doc.line(ix+0.5, iy+1.95, ix+3.1, iy+1.95);
-        doc.line(ix+0.3, iy+3.1,  ix+3.2, iy+3.1);
-        doc.setDrawColor(r,g,b);
-        doc.setLineWidth(0.45); break;
-    }
   }
 
   // ── HEADER ───────────────────────────────────────────────────
@@ -460,7 +423,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   const info = document.getElementById("einladung-info")?.value.trim();
   if (info) {
     drawSection("info", RED, "Weitere Informationen", () => {
-      addParagraphs(info, { indent: 9 });
+      addParagraphs(info, { indent: 9, bullets: true });
     });
   }
 
@@ -468,7 +431,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   const hinweis = document.getElementById("einladung-hinweis")?.value.trim();
   if (hinweis) {
     drawSection("star", RED, "Hinweis", () => {
-      addParagraphs(hinweis, { indent: 9 });
+      addParagraphs(hinweis, { indent: 9, bullets: true });
     });
   }
 
@@ -524,20 +487,10 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     doc.setFillColor(...BLUE);
     doc.rect(0, y, W, icsBlockH, "F");
 
-    // Download-Icon (gleicher Stil wie andere Sektions-Icons, aber weiß)
+    // Download-Icon via icons.js (weiß)
     const ix = margin;
     const iy = y + (icsBlockH / 2) - 2.5;
-    doc.setDrawColor(...WHITE);
-    doc.setFillColor(...WHITE);
-    doc.setLineWidth(0.45);
-    doc.line(ix+1.75, iy+0.3,  ix+1.75, iy+2.3);
-    doc.line(ix+0.85, iy+1.5,  ix+1.75, iy+2.3);
-    doc.line(ix+2.65, iy+1.5,  ix+1.75, iy+2.3);
-    doc.line(ix+0.3,  iy+3.2,  ix+3.2,  iy+3.2);
-    doc.setLineWidth(0.35);
-    doc.line(ix+0.3,  iy+2.6,  ix+0.3,  iy+3.2);
-    doc.line(ix+3.2,  iy+2.6,  ix+3.2,  iy+3.2);
-    doc.setLineWidth(0.45);
+    drawIcon(doc, "download", ix, iy, WHITE);
 
     // Unsichtbarer Link über den gesamten Block → Icon + Text klickbar
     doc.link(0, y, W, icsBlockH, { url: icsUrl });
