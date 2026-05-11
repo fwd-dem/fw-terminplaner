@@ -481,7 +481,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
   }
 
   // ── KALENDER HERUNTERLADEN (blauer Block, klickbar) ──────────
-  const icsUrl    = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
+  const icsUrl    = "https://fwd-dem.github.io/fw-demling-termine/index.html";
   const icsBlockH = 18;
   if (!measureOnly) {
     doc.setFillColor(...BLUE);
