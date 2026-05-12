@@ -108,36 +108,54 @@ function drawIcon(doc, type, ix, iy, color) {
       doc.setLineWidth(0.45);
       break;
 
-    // 🔥 Flamme — Bullet-Icon für Weitere Infos / Hinweis
-    // Gezeichnet als gefüllte Bézier-Kurve, ca. 2.5×3.5mm
+    // 🔥 Flamme — Bullet-Icon, zweifarbig (rot + oranger Kern), ca. 3.5×4mm
     case "flame": {
-      const fx = ix + 1.25;  // horizontale Mitte
-      const fy = iy + 0.2;   // oberer Startpunkt
+      const s  = 0.9;   // Skalierungsfaktor (Icon-Koordinaten × s = mm)
+      const ox = ix;    // x-Offset
+      const oy = iy;    // y-Offset
 
-      // Äußere Flammenform mit Bézierkurven
-      // doc.lines: [[dx1,dy1, dx2,dy2, dx,dy], ...]  (kubische Béziersegmente)
-      doc.lines([
-        // Linke Seite: nach unten-links schwingen
-        [-0.6, 0.8,  -0.9, 1.6,  -0.7, 2.4],
-        // Boden: nach rechts runden
-        [ 0.3, 0.6,   0.9, 0.6,   1.4, 0.0],
-        // Rechte Seite: nach oben-rechts schwingen
-        [ 0.3,-0.8,   0.1,-1.6,  -0.2,-2.4],
-        // Innere Spitze: nach links zurück zur Mitte
-        [-0.2,-0.4,  -0.5, 0.2,  -0.5, 0.4],
-        // Innere linke Kurve zurück zum Start
-        [-0.1,-0.4,  -0.4,-0.6,  -0.7,-1.0],
-      ], fx, fy, [1, 1], "F");
+      // Hilfsfunktion: Pfadpunkt skalieren + verschieben
+      function fp(x, y) { return [x * s + ox, y * s + oy]; }
 
-      // Kleine innere Flamme (hellerer Kern — weiß für Kontrast)
-      doc.setFillColor(255, 255, 255);
-      doc.setDrawColor(255, 255, 255);
-      doc.lines([
-        [-0.15, 0.4,  -0.3, 0.8,  -0.2, 1.3],
-        [ 0.15, 0.3,   0.4, 0.3,   0.6, 0.0],
-        [ 0.1, -0.4,   0.0,-0.8,  -0.2,-1.3],
-        [-0.1, -0.2,  -0.2, 0.1,  -0.3, 0.3],
-      ], fx + 0.1, fy + 0.8, [1, 1], "F");
+      // ── Äußere Flamme (rot) ──────────────────────────────────
+      doc.setFillColor(r, g, b);
+      const outer = [
+        fp(1.75, 0.0),   // Spitze oben
+        fp(0.9,  0.5),   // links oben (Nebenzunge)
+        fp(0.8,  1.0),
+        fp(1.1,  1.3),   // linke Einbuchtung
+        fp(0.5,  2.0),   // linkes Tal
+        fp(0.1,  2.8),   // untere linke Kurve
+        fp(0.1,  3.5),   // Boden links
+        fp(1.75, 3.9),   // Boden Mitte
+        fp(3.4,  3.5),   // Boden rechts
+        fp(3.4,  2.8),
+        fp(3.0,  2.0),   // rechtes Tal
+        fp(2.4,  1.3),   // rechte Einbuchtung
+        fp(2.65, 1.0),
+        fp(2.55, 0.5),   // rechts oben (Nebenzunge)
+        fp(1.75, 0.0),   // zurück zur Spitze
+      ];
+      doc.moveTo(outer[0][0], outer[0][1]);
+      outer.slice(1).forEach(p => doc.lineTo(p[0], p[1]));
+      doc.fill();
+
+      // ── Innerer Kern (orange) ─────────────────────────────────
+      doc.setFillColor(255, 140, 0);
+      const inner = [
+        fp(1.75, 1.2),   // Spitze Kern
+        fp(1.2,  1.8),
+        fp(0.9,  2.5),
+        fp(0.9,  3.2),
+        fp(1.75, 3.5),   // Boden Kern
+        fp(2.6,  3.2),
+        fp(2.6,  2.5),
+        fp(2.3,  1.8),
+        fp(1.75, 1.2),
+      ];
+      doc.moveTo(inner[0][0], inner[0][1]);
+      inner.slice(1).forEach(p => doc.lineTo(p[0], p[1]));
+      doc.fill();
 
       // Farben zurücksetzen
       doc.setFillColor(r, g, b);

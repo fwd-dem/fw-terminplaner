@@ -350,6 +350,35 @@
     </button>
   </div>
 
+  <script>
+    // Bullet-Logik für Weitere Informationen + Hinweis
+    ["einladung-info", "einladung-hinweis"].forEach(id => {
+      const ta = document.getElementById(id);
+      if (!ta) return;
+
+      // Beim ersten Zeichen in leerem Feld → • voranstellen
+      ta.addEventListener("input", function() {
+        if (this.value.length === 1 && this.value !== "•") {
+          this.value = "• " + this.value;
+          // Cursor ans Ende
+          this.selectionStart = this.selectionEnd = this.value.length;
+        }
+      });
+
+      // Bei Enter → neue Zeile mit • beginnen
+      ta.addEventListener("keydown", function(e) {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        const pos   = this.selectionStart;
+        const before = this.value.substring(0, pos);
+        const after  = this.value.substring(this.selectionEnd);
+        this.value   = before + "\n• " + after;
+        const newPos = pos + 3; // "\n• " = 3 Zeichen
+        this.selectionStart = this.selectionEnd = newPos;
+      });
+    });
+  </script>
+
 </div>
 
 <!-- GEBURTSTAGE -->

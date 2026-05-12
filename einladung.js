@@ -289,7 +289,9 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
 
   function addParagraphs(text, opts = {}) {
     const { size = CONTENT_SIZE, color = DARK, indent = 0, paraAfter = 4, bullets = false } = opts;
-    const paragraphs = clean(text).split("\n").filter(p => p.trim() !== "");
+    const paragraphs = clean(text).split("\n")
+      .map(p => p.trim().replace(/^•\s*/, ""))  // • am Zeilenanfang entfernen
+      .filter(p => p !== "");
     const useBullets = bullets && paragraphs.length > 1;
     const bulletW    = useBullets ? 5 : 0;  // 3.5mm Flamme + 1.5mm Abstand
 
