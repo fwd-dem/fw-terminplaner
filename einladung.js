@@ -224,6 +224,15 @@ async function startPDFGeneration() {
     fontName = "DejaVuSans";
   } catch { console.warn("DejaVuSans nicht gefunden, Fallback: helvetica"); }
 
+  // ── Icons laden ───────────────────────────────────────────────
+  const icons = {};
+  await Promise.all(
+    Object.entries(ICON_FILES).map(async ([key, filename]) => {
+      try { icons[key] = await fileToBase64(filename); }
+      catch { console.warn(`Icon nicht gefunden: ${filename}`); }
+    })
+  );
+
   function loadFonts(doc) {
     if (fontName === "DejaVuSans") {
       doc.addFileToVFS("DejaVuSans.ttf",      fontR);
@@ -236,13 +245,13 @@ async function startPDFGeneration() {
   // ── SCHRITT 1: Höhe messen auf Dummy-Dokument ─────────────────
   const dummy = new jsPDF({ unit: "mm", format: [160, 500] });
   loadFonts(dummy);
-  const measuredH = buildPDF(dummy, fontName, LOGO_FW, LOGO_FFW, true);
+  const measuredH = buildPDF(dummy, fontName, LOGO_FW, LOGO_FFW, true, icons);
 
   // ── SCHRITT 2: Echtes Dokument mit gemessener Höhe ────────────
   const finalH = measuredH + 10;
   const real   = new jsPDF({ unit: "mm", format: [160, finalH] });
   loadFonts(real);
-  buildPDF(real, fontName, LOGO_FW, LOGO_FFW, false);
+  buildPDF(real, fontName, LOGO_FW, LOGO_FFW, false, icons);
 
   const activeBtn  = document.querySelector("#month-selector .allday-btn.active");
   const monthLabel = activeBtn ? activeBtn.textContent.replace(/\s+/g, "_") : "Einladung";
@@ -253,7 +262,7 @@ async function startPDFGeneration() {
    🏗️ PDF INHALT AUFBAUEN
 ========================= */
 
-function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
+function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   const W      = 160;
   const margin = 10;
   const usable = W - margin * 2;
@@ -304,7 +313,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
         // Flammen-Bullet via icons.js
         const lines = doc.splitTextToSize(para.trim(), usable - indent - bulletW);
         if (!measureOnly) {
-          drawIcon(doc, "flame", margin + indent, y - 2.5, color);
+          drawIcon(doc, "flame", margin + indent, y - 3, 4, icons);
           doc.setFontSize(size);
           doc.setFont(FONT, "normal");
           doc.setTextColor(...color);
@@ -342,7 +351,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     y = startY + PAD_TOP;
 
     if (!measureOnly) {
-      if (iconType) drawIcon(doc, iconType, margin, y - 0.5, iconColor || RED);
+      if (iconType) drawIcon(doc, iconType, margin, y - 0.5, 4, icons);
       doc.setFontSize(LABEL_SIZE);
       doc.setFont(FONT, "bold");
       doc.setTextColor(...(iconColor || RED));
@@ -492,7 +501,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     // Download-Icon via icons.js (weiß)
     const ix = margin;
     const iy = y + (icsBlockH / 2) - 2.5;
-    drawIcon(doc, "download", ix, iy, WHITE);
+    drawIcon(doc, "download", ix, iy, 4, icons);
 
     // Unsichtbarer Link über den gesamten Block → Icon + Text klickbar
     doc.link(0, y, W, icsBlockH, { url: icsUrl });
