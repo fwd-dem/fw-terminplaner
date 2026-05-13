@@ -382,8 +382,8 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly) {
     const L2_CX = textRight + (W - textRight) / 2;
     const L2_X  = L2_CX - LOGO_H / 2;
 
-    if (LOGO_FW)  doc.addImage(LOGO_FW,  "PNG", L1_X, LOGO_Y, LOGO_H, LOGO_H);
-    if (LOGO_FFW) doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, LOGO_H, LOGO_H);
+    if (LOGO_FW)  doc.addImage(LOGO_FW,  "PNG", L1_X, LOGO_Y, LOGO_H, LOGO_H, "", "SLOW");
+    if (LOGO_FFW) doc.addImage(LOGO_FFW, "PNG", L2_X, LOGO_Y, LOGO_H, LOGO_H, "", "SLOW");
 
     // Text mittig auf der Seite
     doc.setTextColor(255, 255, 255);
