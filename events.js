@@ -120,7 +120,7 @@ function createEventCard(e) {
   card.innerHTML = `
     <div style="font-size:13px; color:${subColor};">📅 ${formatEventDate(e)}</div>
     <div style="font-size:18px; font-weight:bold; margin-top:6px; color:${textColor};">
-      ${e.title || "(kein Titel)"}
+      ${e.important ? '<img src="star.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;">' : ""}${e.title || "(kein Titel)"}
     </div>
     <div style="font-size:13px; margin-top:4px; color:${textColor};">
       ${e.allday ? "Ganztägig" : "⏰ " + (e.start || "-") + " – " + (e.end || "-")}
@@ -213,6 +213,7 @@ async function saveEventForce() {
     location:  document.getElementById("location").value,
     desc:      document.getElementById("desc").value,
     category:  document.getElementById("category").value || "other",
+    important: document.getElementById("important").checked,
     reminder1: document.getElementById("reminder1").value,
     reminder2: document.getElementById("reminder2").value
   };
@@ -260,6 +261,14 @@ function editEvent(id) {
   document.getElementById("category").value  = e.category;
   document.getElementById("reminder1").value = e.reminder1 || "";
   document.getElementById("reminder2").value = e.reminder2 || "";
+
+  // Wichtig-Slider setzen
+  const importantEl = document.getElementById("important");
+  const importantLabel = document.getElementById("important-label");
+  importantEl.checked = !!e.important;
+  importantLabel.textContent = e.important ? "Ja" : "Nein";
+  importantLabel.style.color = e.important ? "#d32f2f" : "#888";
+
   setActiveCategory("form", e.category);
 }
 
@@ -289,6 +298,9 @@ function resetForm() {
   document.getElementById("title").value          = "";
   document.getElementById("desc").value           = "";
   document.getElementById("location").value       = DEFAULT_LOCATION;
+  document.getElementById("important").checked   = false;
+  const impLabel = document.getElementById("important-label");
+  if (impLabel) { impLabel.textContent = "Nein"; impLabel.style.color = "#888"; }
   document.getElementById("category").value       = "";
   document.getElementById("templateSelect").value = "";
   document.getElementById("reminder1").value      = "";
@@ -402,6 +414,7 @@ function importEvents(event) {
             location:  ev.location  || "",
             desc:      ev.desc      || "",
             category:  ev.category  || "other",
+            important: ev.important || false,
             reminder1: ev.reminder1 || "",
             reminder2: ev.reminder2 || ""
           });

@@ -83,9 +83,33 @@ function fillEinladung(year, month) {
     .filter(e => e.category === "active")
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Alle Nicht-Aktive Termine chronologisch
+  // Alle Nicht-Aktive Termine des Monats chronologisch
   const infoEvents = monthEvents
     .filter(e => e.category !== "active")
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Wichtige zukünftige Termine NACH dem Einladungsmonat
+  // Letzter Tag des Einladungsmonats als Grenze
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  lastDayOfMonth.setHours(23, 59, 59, 999);
+
+  // IDs der bereits in infoEvents enthaltenen Termine (Doppel vermeiden)
+  const infoEventIds = new Set(infoEvents.map(e => e.id));
+  // IDs der Aktive-Termine des Monats (auch diese nicht doppeln)
+  const activeEventIds = new Set(activeEvents.map(e => e.id));
+
+  const importantFutureEvents = store.events
+    .filter(e => {
+      if (!e.important) return false;
+      if (!e.date) return false;
+      const d = new Date(e.date);
+      // Nur Termine nach dem Einladungsmonat
+      if (d <= lastDayOfMonth) return false;
+      // Nicht bereits in infoEvents oder activeEvents
+      if (infoEventIds.has(e.id)) return false;
+      if (activeEventIds.has(e.id)) return false;
+      return true;
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // ── Wann ──────────────────────────────────────────────────────
@@ -113,13 +137,16 @@ function fillEinladung(year, month) {
     themaEl.value = themen.join("\n") || "";
   }
 
-  // ── Weitere Informationen: alle Nicht-Aktive Termine ─────────
+  // ── Weitere Informationen: Monatstermine + wichtige Zukunftstermine ──
   const infoEl = document.getElementById("einladung-info");
   if (infoEl) {
-    if (infoEvents.length === 0) {
+    // Alle Einträge zusammenführen: Monatstermine zuerst, dann wichtige Zukunftstermine
+    const allInfoEvents = [...infoEvents, ...importantFutureEvents];
+
+    if (allInfoEvents.length === 0) {
       infoEl.value = "";
     } else {
-      infoEl.value = infoEvents.map(e => {
+      infoEl.value = allInfoEvents.map(e => {
         const datStr = new Date(e.date).toLocaleDateString("de-DE", {
           weekday: "long", day: "numeric", month: "long"
         });

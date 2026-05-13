@@ -84,6 +84,20 @@
   </div>
 
   <div class="form-section">
+    <label>⭐ Wichtiger Termin</label>
+    <div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
+      <label class="toggle-switch">
+        <input type="checkbox" id="important" onchange="document.getElementById('important-label').textContent = this.checked ? 'Ja' : 'Nein'; document.getElementById('important-label').style.color = this.checked ? '#d32f2f' : '#888';">
+        <span class="toggle-slider"></span>
+      </label>
+      <span id="important-label" style="font-size:13px; color:#888;">Nein</span>
+    </div>
+    <p style="font-size:11px; color:#aaa; margin:6px 0 0;">
+      Wichtige Termine erscheinen in zukünftigen Einladungen unter "Weitere Informationen".
+    </p>
+  </div>
+
+  <div class="form-section">
     <label>🏷️ Kategorie</label>
     <div class="category-badges form-category">
       <div class="badge" data-cat="active">Aktive</div>
