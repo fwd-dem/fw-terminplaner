@@ -490,7 +490,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
           const descLines = doc.splitTextToSize(clean(descVal), textW);
           if (!measureOnly) doc.text(descLines, textIndent, y + 1);
           y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
-          y += isLast ? 2 : 5;
+          y += isLast ? 2 : 4;
         } else {
           y += isLast ? 2 : 4;
         }
@@ -541,10 +541,8 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
           const descLines = doc.splitTextToSize(clean(desc), textW);
           if (!measureOnly) doc.text(descLines, textIndent, y + 1);
           y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
-          // Größerer Abstand nach Block mit Beschreibung
-          y += isLast ? 2 : 5;
+          y += isLast ? 2 : 4;
         } else {
-          // Normaler Abstand ohne Beschreibung
           y += isLast ? 2 : 4;
         }
       });
