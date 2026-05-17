@@ -186,6 +186,8 @@ function fillEinladung(year, month) {
 ========================= */
 
 async function generateEinladungPDF() {
+  showLoading(true);
+
   // ── 1. ICS ZUERST PUSHEN (direkt am Button-Klick → iOS-kompatibel) ──
   const icsToday = new Date(); icsToday.setHours(0, 0, 0, 0);
   const icsEvents = store.events
@@ -207,11 +209,14 @@ async function generateEinladungPDF() {
     const script = document.createElement("script");
     script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
     script.onload  = () => startPDFGeneration();
-    script.onerror = () => showModal({
-      title: "Fehler",
-      text: "PDF-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.",
-      onConfirm: () => {}
-    });
+    script.onerror = () => {
+      showLoading(false);
+      showModal({
+        title: "Fehler",
+        text: "PDF-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.",
+        onConfirm: () => {}
+      });
+    };
     document.head.appendChild(script);
     return;
   }
@@ -283,6 +288,7 @@ async function startPDFGeneration() {
   const activeBtn  = document.querySelector("#month-selector .allday-btn.active");
   const monthLabel = activeBtn ? activeBtn.textContent.replace(/\s+/g, "_") : "Einladung";
   real.save("FW_Einladung_" + monthLabel + ".pdf");
+  showLoading(false);
 }
 
 /* =========================
