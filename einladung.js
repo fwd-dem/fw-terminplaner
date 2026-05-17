@@ -467,7 +467,47 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   const info = document.getElementById("einladung-info")?.value.trim();
   if (info) {
     drawSection("info", RED, "Weitere Informationen", () => {
-      addParagraphs(info, { indent: 9, bullets: true });
+      const lines = info.split("\n")
+        .map(l => l.trim().replace(/^•\s*/, ""))
+        .filter(l => l !== "");
+      const useBullets = lines.length > 1;
+      const iconW      = useBullets ? 5 : 0;  // Platz für fireengine.png
+      const textIndent = margin + 9 + iconW;
+      const textW      = usable - 9 - iconW;
+
+      lines.forEach((line, i) => {
+        const isLast   = i === lines.length - 1;
+        // Titel und Beschreibung trennen bei " – "
+        const sepIdx   = line.indexOf(" – ");
+        const titel    = sepIdx !== -1 ? line.substring(0, sepIdx).trim() : line.trim();
+        const desc     = sepIdx !== -1 ? line.substring(sepIdx + 3).trim() : "";
+
+        // Bullet-Icon zeichnen
+        if (useBullets && !measureOnly) {
+          drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
+        }
+
+        // Titel in fett
+        doc.setFontSize(CONTENT_SIZE);
+        doc.setFont(FONT, "bold");
+        doc.setTextColor(...DARK);
+        const titelLines = doc.splitTextToSize(clean(titel), textW);
+        if (!measureOnly) doc.text(titelLines, textIndent, y);
+        y += titelLines.length * (CONTENT_SIZE * 0.38);
+
+        // Beschreibung in normal, eingerückt
+        if (desc) {
+          doc.setFont(FONT, "normal");
+          const descLines = doc.splitTextToSize(clean(desc), textW);
+          if (!measureOnly) doc.text(descLines, textIndent, y + 3);
+          y += descLines.length * (CONTENT_SIZE * 0.38) + 3;
+          // Größerer Abstand nach Block mit Beschreibung
+          y += isLast ? 2 : 5;
+        } else {
+          // Normaler Abstand ohne Beschreibung
+          y += isLast ? 2 : 4;
+        }
+      });
     });
   }
 
