@@ -112,29 +112,43 @@ function fillEinladung(year, month) {
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // ── Wann ──────────────────────────────────────────────────────
+  // ── Wann: dynamisch pro Termin mit editierbarem Beschreibungsfeld ──
   const wannEl = document.getElementById("einladung-wann");
   if (wannEl) {
     if (activeEvents.length === 0) {
-      wannEl.innerHTML = '<span style="color:#aaa;">Keine Aktive-Termine in diesem Monat</span>';
+      wannEl.innerHTML = '<span style="color:#aaa;font-size:13px;">Keine Aktive-Termine in diesem Monat</span>';
     } else {
-      wannEl.innerHTML = activeEvents.map(e => {
+      wannEl.innerHTML = "";
+      activeEvents.forEach((e, i) => {
         const datStr = new Date(e.date).toLocaleDateString("de-DE", {
           weekday: "long", day: "numeric", month: "long"
         });
         const time = e.start ? ` ${e.start} Uhr` : "";
-        return `<div class="einladung-wann-row">📅 ${datStr}${time}</div>`;
-      }).join("");
-    }
-  }
 
-  // ── Thema ─────────────────────────────────────────────────────
-  const themaEl = document.getElementById("einladung-thema");
-  if (themaEl) {
-    const themen = activeEvents
-      .filter(e => e.desc && e.desc.trim())
-      .map(e => e.desc.trim());
-    themaEl.value = themen.join("\n") || "";
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "margin-bottom:10px;";
+
+        // Datum-Zeile
+        const label = document.createElement("div");
+        label.className = "einladung-wann-row";
+        label.style.fontWeight = "600";
+        label.textContent = `📅 ${datStr}${time}`;
+        wrapper.appendChild(label);
+
+        // Beschreibungs-Textfeld
+        const ta = document.createElement("textarea");
+        ta.className       = "einladung-textarea";
+        ta.id              = `einladung-thema-${i}`;
+        ta.dataset.eventId = e.id;
+        ta.placeholder     = "Thema / Beschreibung…";
+        ta.rows            = 2;
+        ta.value           = e.desc ? e.desc.trim() : "";
+        ta.style.marginTop = "4px";
+        wrapper.appendChild(ta);
+
+        wannEl.appendChild(wrapper);
+      });
+    }
   }
 
   // ── Weitere Informationen: Monatstermine + wichtige Zukunftstermine ──
@@ -439,24 +453,50 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
 
   y = HEADER_H + 6;
 
-  // ── ÜBUNGSTERMINE ─────────────────────────────────────────────
-  const wannEl   = document.getElementById("einladung-wann");
-  const wannRows = wannEl ? wannEl.querySelectorAll(".einladung-wann-row") : [];
+  // ── ÜBUNGSTERMINE (mit Beschreibung aus den Textfeldern) ──────
+  const wannContainer = document.getElementById("einladung-wann");
+  const wannItems     = wannContainer ? wannContainer.querySelectorAll("[id^='einladung-thema-']") : [];
+  const wannLabels    = wannContainer ? wannContainer.querySelectorAll(".einladung-wann-row") : [];
+
   drawSection("calendar_lines", RED, "Übungstermine", () => {
-    if (wannRows.length === 0) {
+    if (wannLabels.length === 0) {
       addText("Keine Termine eingetragen", { color: GREY, indent: 9, after: 1 });
     } else {
-      wannRows.forEach(row => addText(row.textContent.trim(), { indent: 9 }));
+      const iconW      = wannLabels.length > 1 ? 5 : 0;
+      const textIndent = margin + 9 + iconW;
+      const textW      = usable - 9 - iconW;
+
+      wannLabels.forEach((label, i) => {
+        const isLast  = i === wannLabels.length - 1;
+        const datStr  = label.textContent.replace("📅 ", "").trim();
+        const descVal = wannItems[i] ? wannItems[i].value.trim() : "";
+
+        // Bullet-Icon
+        if (wannLabels.length > 1 && !measureOnly) {
+          drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
+        }
+
+        // Datum in fett
+        doc.setFontSize(CONTENT_SIZE);
+        doc.setFont(FONT, "bold");
+        doc.setTextColor(...DARK);
+        const datLines = doc.splitTextToSize(clean(datStr), textW);
+        if (!measureOnly) doc.text(datLines, textIndent, y);
+        y += datLines.length * (CONTENT_SIZE * 0.38);
+
+        // Beschreibung in normal
+        if (descVal) {
+          doc.setFont(FONT, "normal");
+          const descLines = doc.splitTextToSize(clean(descVal), textW);
+          if (!measureOnly) doc.text(descLines, textIndent, y + 1);
+          y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
+          y += isLast ? 2 : 5;
+        } else {
+          y += isLast ? 2 : 4;
+        }
+      });
     }
   });
-
-  // ── ÜBUNGSTHEMEN ──────────────────────────────────────────────
-  const thema = document.getElementById("einladung-thema")?.value.trim();
-  if (thema) {
-    drawSection("bullet_list", RED, "Übungsthemen", () => {
-      addParagraphs(thema, { indent: 9 });
-    });
-  }
 
   // ── ORT ───────────────────────────────────────────────────────
   drawSection("pin", RED, "Ort", () => {

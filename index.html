@@ -35,7 +35,7 @@
       <h2>📚 Vorlagen</h2>
     </div>
     <div class="card" onclick="openEinladung()">
-      <h2>📬 Einladung</h2>
+      <h2>📄 Einladung</h2>
     </div>
     <div class="card" onclick="showScreen('einstellungen')">
       <h2>⚙️ Einstellungen</h2>
@@ -296,7 +296,7 @@
 
 <!-- EINLADUNG -->
 <div id="screen-einladung" class="screen">
-  <h2>📬 Einladung erstellen</h2>
+  <h2>📄 Einladung erstellen</h2>
 
   <!-- Monat wählen -->
   <div class="form-section">
@@ -318,17 +318,13 @@
 
     <div class="einladung-block">
       <span class="einladung-label">Wann:</span>
-      <div id="einladung-wann" class="einladung-value einladung-multiline"></div>
+      <!-- Wird dynamisch befüllt: pro Termin ein Datum-Label + Beschreibungs-Textfeld -->
+      <div id="einladung-wann"></div>
     </div>
 
     <div class="einladung-block">
       <span class="einladung-label">Wo:</span>
       <span class="einladung-value">Feuerwehrgerätehaus (FWGH)</span>
-    </div>
-
-    <div class="einladung-block">
-      <span class="einladung-label">Thema:</span>
-      <textarea id="einladung-thema" class="einladung-textarea" placeholder="Thema der Übung…" rows="2"></textarea>
     </div>
 
     <div class="einladung-block">
