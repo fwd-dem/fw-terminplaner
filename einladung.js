@@ -151,7 +151,7 @@ function fillEinladung(year, month) {
           weekday: "long", day: "numeric", month: "long"
         });
         const time  = e.start ? ` ${e.start} Uhr` : "";
-        const titel = e.title ? ` ${e.title}` : "";
+        const titel = e.title ? ` - ${e.title}` : "";
         const desc  = e.desc && e.desc.trim() ? ` – ${e.desc.trim()}` : "";
         return `• ${datStr}${time}${titel}${desc}`;
       }).join("\n");
@@ -487,7 +487,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
           drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
         }
 
-        // Titel in fett
+        // Titel in fett (Datum - Titel)
         doc.setFontSize(CONTENT_SIZE);
         doc.setFont(FONT, "bold");
         doc.setTextColor(...DARK);
@@ -495,12 +495,12 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         if (!measureOnly) doc.text(titelLines, textIndent, y);
         y += titelLines.length * (CONTENT_SIZE * 0.38);
 
-        // Beschreibung in normal, eingerückt
+        // Beschreibung in normal, eingerückt, näher am Titel
         if (desc) {
           doc.setFont(FONT, "normal");
           const descLines = doc.splitTextToSize(clean(desc), textW);
-          if (!measureOnly) doc.text(descLines, textIndent, y + 3);
-          y += descLines.length * (CONTENT_SIZE * 0.38) + 3;
+          if (!measureOnly) doc.text(descLines, textIndent, y + 1);
+          y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
           // Größerer Abstand nach Block mit Beschreibung
           y += isLast ? 2 : 5;
         } else {
