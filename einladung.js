@@ -151,26 +151,46 @@ function fillEinladung(year, month) {
     }
   }
 
-  // ── Weitere Informationen: Monatstermine + wichtige Zukunftstermine ──
-  const infoEl = document.getElementById("einladung-info");
-  if (infoEl) {
-    // Alle Einträge zusammenführen: Monatstermine zuerst, dann wichtige Zukunftstermine
-    const allInfoEvents = [...infoEvents, ...importantFutureEvents];
+  // ── Weitere Informationen: dynamisch pro Termin + Freifeld ────
+  const infoTermineEl = document.getElementById("einladung-info-termine");
+  const infoFreiEl    = document.getElementById("einladung-info-frei");
 
-    if (allInfoEvents.length === 0) {
-      infoEl.value = "";
-    } else {
-      infoEl.value = allInfoEvents.map(e => {
-        const datStr = new Date(e.date).toLocaleDateString("de-DE", {
-          weekday: "long", day: "numeric", month: "long"
-        });
-        const time  = e.start ? ` ${e.start} Uhr` : "";
-        const titel = e.title ? ` - ${e.title}` : "";
-        const desc  = e.desc && e.desc.trim() ? ` – ${e.desc.trim()}` : "";
-        return `• ${datStr}${time}${titel}${desc}`;
-      }).join("\n");
-    }
+  if (infoTermineEl) {
+    const allInfoEvents = [...infoEvents, ...importantFutureEvents];
+    infoTermineEl.innerHTML = "";
+
+    allInfoEvents.forEach((e, i) => {
+      const datStr = new Date(e.date).toLocaleDateString("de-DE", {
+        weekday: "long", day: "numeric", month: "long"
+      });
+      const time  = e.start ? ` ${e.start} Uhr` : "";
+      const titel = e.title ? ` - ${e.title}` : "";
+
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "margin-bottom:10px;";
+
+      // Datum + Titel Zeile
+      const label = document.createElement("div");
+      label.style.cssText   = "font-weight:600; font-size:14px; margin-bottom:4px;";
+      label.textContent     = `📅 ${datStr}${time}${titel}`;
+      wrapper.appendChild(label);
+
+      // Beschreibungs-Textfeld
+      const ta           = document.createElement("textarea");
+      ta.className       = "einladung-textarea";
+      ta.id              = `einladung-info-desc-${i}`;
+      ta.dataset.eventId = e.id;
+      ta.placeholder     = "Beschreibung…";
+      ta.rows            = 2;
+      ta.value           = e.desc ? e.desc.trim() : "";
+      wrapper.appendChild(ta);
+
+      infoTermineEl.appendChild(wrapper);
+    });
   }
+
+  // Freifeld leeren beim Monatswechsel
+  if (infoFreiEl) infoFreiEl.value = "";
 
   // Hinweis leeren
   const hinweisEl = document.getElementById("einladung-hinweis");
@@ -504,48 +524,80 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   });
 
   // ── WEITERE INFORMATIONEN ─────────────────────────────────────
-  const info = document.getElementById("einladung-info")?.value.trim();
-  if (info) {
-    drawSection("info", RED, "Weitere Informationen", () => {
-      const lines = info.split("\n")
-        .map(l => l.trim().replace(/^•\s*/, ""))
-        .filter(l => l !== "");
-      const useBullets = lines.length > 1;
-      const iconW      = useBullets ? 5 : 0;  // Platz für fireengine.png
-      const textIndent = margin + 9 + iconW;
-      const textW      = usable - 9 - iconW;
+  // Termin-Blöcke aus dynamischen Textfeldern
+  const infoTermineContainer = document.getElementById("einladung-info-termine");
+  const infoTermineItems     = infoTermineContainer
+    ? infoTermineContainer.querySelectorAll("[id^='einladung-info-desc-']")
+    : [];
+  const infoTermineLabels    = infoTermineContainer
+    ? infoTermineContainer.querySelectorAll("div[style*='font-weight']")
+    : [];
 
-      lines.forEach((line, i) => {
-        const isLast   = i === lines.length - 1;
-        // Titel und Beschreibung trennen bei " – "
-        const sepIdx   = line.indexOf(" – ");
-        const titel    = sepIdx !== -1 ? line.substring(0, sepIdx).trim() : line.trim();
-        const desc     = sepIdx !== -1 ? line.substring(sepIdx + 3).trim() : "";
+  // Freifeld
+  const infoFrei = document.getElementById("einladung-info-frei")?.value.trim() || "";
 
-        // Bullet-Icon zeichnen
+  const hasInfoTermine = infoTermineLabels.length > 0;
+  const hasInfoFrei    = infoFrei.length > 0;
+
+  if (hasInfoTermine || hasInfoFrei) {
+    drawSection("info", RED, "Weitere Termine", () => {
+      const totalItems  = infoTermineLabels.length +
+        (hasInfoFrei ? infoFrei.split("\n").filter(l => l.trim()).length : 0);
+      const useBullets  = totalItems > 1;
+      const iconW       = useBullets ? 5 : 0;
+      const textIndent  = margin + 9 + iconW;
+      const textW       = usable - 9 - iconW;
+
+      // ── Termin-Blöcke ───────────────────────────────────────
+      Array.from(infoTermineLabels).forEach((label, i) => {
+        const isLastBlock = !hasInfoFrei && i === infoTermineLabels.length - 1;
+        const titelStr    = label.textContent.trim();
+        const descVal     = infoTermineItems[i] ? infoTermineItems[i].value.trim() : "";
+
+        // Bullet-Icon
         if (useBullets && !measureOnly) {
           drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
         }
 
-        // Titel in fett (Datum - Titel)
+        // Titel fett
         doc.setFontSize(CONTENT_SIZE);
         doc.setFont(FONT, "bold");
         doc.setTextColor(...DARK);
-        const titelLines = doc.splitTextToSize(clean(titel), textW);
+        const titelLines = doc.splitTextToSize(clean(titelStr), textW);
         if (!measureOnly) doc.text(titelLines, textIndent, y);
         y += titelLines.length * (CONTENT_SIZE * 0.38);
 
-        // Beschreibung in normal, eingerückt, näher am Titel
-        if (desc) {
+        // Beschreibung normal
+        if (descVal) {
           doc.setFont(FONT, "normal");
-          const descLines = doc.splitTextToSize(clean(desc), textW);
+          const descLines = doc.splitTextToSize(clean(descVal), textW);
           if (!measureOnly) doc.text(descLines, textIndent, y + 1);
           y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
-          y += isLast ? 2 : 4;
-        } else {
-          y += isLast ? 2 : 4;
         }
+        y += isLastBlock ? 2 : 4;
       });
+
+      // ── Freifeld ─────────────────────────────────────────────
+      if (hasInfoFrei) {
+        const freiLines = infoFrei.split("\n")
+          .map(l => l.trim().replace(/^•\s*/, ""))
+          .filter(l => l !== "");
+
+        freiLines.forEach((line, i) => {
+          const isLast = i === freiLines.length - 1;
+
+          if (useBullets && !measureOnly) {
+            drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
+          }
+
+          doc.setFontSize(CONTENT_SIZE);
+          doc.setFont(FONT, "normal");
+          doc.setTextColor(...DARK);
+          const lines = doc.splitTextToSize(clean(line), textW);
+          if (!measureOnly) doc.text(lines, textIndent, y);
+          y += lines.length * (CONTENT_SIZE * 0.38) + (isLast ? 2 : 4);
+        });
+      }
     });
   }
 

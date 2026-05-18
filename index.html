@@ -308,16 +308,15 @@
   <div class="form-section einladung-preview" id="einladung-editor">
 
     <div class="einladung-header">
-      <div class="einladung-logo">🚒</div>
+      <div class="einladung-logo">📬</div>
       <div>
         <div class="einladung-title">Einladung</div>
         <div class="einladung-subtitle">Freiwillige Feuerwehr Demling</div>
       </div>
     </div>
 
-
     <div class="einladung-block">
-      <span class="einladung-label">Wann:</span>
+      <span class="einladung-label">Übungstermine:</span>
       <!-- Wird dynamisch befüllt: pro Termin ein Datum-Label + Beschreibungs-Textfeld -->
       <div id="einladung-wann"></div>
     </div>
@@ -328,8 +327,12 @@
     </div>
 
     <div class="einladung-block">
-      <span class="einladung-label">Weitere Informationen:</span>
-      <textarea id="einladung-info" class="einladung-textarea" placeholder="Weitere Informationen…" rows="4"></textarea>
+      <span class="einladung-label">Weitere Termine:</span>
+      <!-- Wird dynamisch befüllt: pro Termin ein Block + Freifeld am Ende -->
+      <div id="einladung-info-termine"></div>
+      <textarea id="einladung-info-frei" class="einladung-textarea"
+                placeholder="Weitere Informationen…" rows="3"
+                style="margin-top:8px;"></textarea>
     </div>
 
     <div class="einladung-block" id="einladung-geburtstag-block">
@@ -361,8 +364,8 @@
   </div>
 
   <script>
-    // Bullet-Logik für Weitere Informationen + Hinweis
-    ["einladung-info", "einladung-hinweis"].forEach(id => {
+    // Bullet-Logik nur noch für Freifeld und Hinweis
+    ["einladung-info-frei", "einladung-hinweis"].forEach(id => {
       const ta = document.getElementById(id);
       if (!ta) return;
 
@@ -370,7 +373,6 @@
       ta.addEventListener("input", function() {
         if (this.value.length === 1 && this.value !== "•") {
           this.value = "• " + this.value;
-          // Cursor ans Ende
           this.selectionStart = this.selectionEnd = this.value.length;
         }
       });
@@ -379,11 +381,11 @@
       ta.addEventListener("keydown", function(e) {
         if (e.key !== "Enter") return;
         e.preventDefault();
-        const pos   = this.selectionStart;
+        const pos    = this.selectionStart;
         const before = this.value.substring(0, pos);
         const after  = this.value.substring(this.selectionEnd);
         this.value   = before + "\n• " + after;
-        const newPos = pos + 3; // "\n• " = 3 Zeichen
+        const newPos = pos + 3;
         this.selectionStart = this.selectionEnd = newPos;
       });
     });
