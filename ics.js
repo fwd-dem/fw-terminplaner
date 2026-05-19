@@ -116,7 +116,7 @@ function buildLocalICS(events) {
     lines.push('SUMMARY:' + summary);
     lines.push('STATUS:CONFIRMED');
     lines.push('TRANSP:OPAQUE');
-    lines.push('SEQUENCE:0');
+    lines.push('SEQUENCE:' + Math.floor(Date.now() / 1000));
     if (desc) lines.push('DESCRIPTION:' + desc);
     if (loc)  lines.push('LOCATION:' + loc);
 
