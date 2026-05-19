@@ -80,30 +80,56 @@ async function saveEventToGitHub(eventData, existingId) {
 
 // Termin löschen
 async function deleteEventFromGitHub(id) {
-  // Lokale Kopie für Rollback
-  const backup = [...store.events];
+  const backup        = [...store.events];
+  const backupGel     = [...store.geloeschte];
+
+  // Zu löschenden Termin merken (für CANCELLED in ICS)
+  const deletedEvent  = store.events.find(e => e.id === id);
 
   // Optimistisch entfernen (UI sofort aktualisieren)
   store.events = store.events.filter(e => e.id !== id);
   render();
 
-  const result = await saveEvents();
+  // UID in geloeschte_termine.json speichern (nur wenn in der Zukunft)
+  if (deletedEvent) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d     = new Date(deletedEvent.date); d.setHours(0, 0, 0, 0);
 
-  if (!result.ok) {
-    // Rollback
-    store.events = backup;
+    if (d >= today) {
+      // Noch nicht in der Liste → hinzufügen
+      if (!store.geloeschte.find(g => g.uid === id)) {
+        store.geloeschte.push({
+          uid:       id,
+          title:     deletedEvent.title || "",
+          date:      deletedEvent.date,
+          deletedAt: new Date().toISOString()
+        });
+      }
+    }
+  }
+
+  // Beide Dateien speichern
+  const [resultEvents, resultGel] = await Promise.all([
+    saveEvents(),
+    saveGeloeschteGH()
+  ]);
+
+  if (!resultEvents.ok) {
+    store.events     = backup;
+    store.geloeschte = backupGel;
     render();
     showModal({
       title: "⚠️ Löschen fehlgeschlagen",
-      text: `Fehler: ${result.reason}\n\nBitte versuche es erneut.`,
+      text: `Fehler: ${resultEvents.reason}\n\nBitte versuche es erneut.`,
       onConfirm: () => {}
     });
   }
 }
 
 // Mehrere vergangene Termine auf einmal löschen
+// (vergangene Termine kommen nicht in CANCELLED — sie sind bereits vorbei)
 async function deletePastEventsFromGitHub(pastEvents) {
-  const backup = [...store.events];
+  const backup  = [...store.events];
   const pastIds = new Set(pastEvents.map(e => e.id));
 
   store.events = store.events.filter(e => !pastIds.has(e.id));

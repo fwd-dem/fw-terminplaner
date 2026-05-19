@@ -46,6 +46,16 @@ function buildLocalICS(events) {
   var now   = icsDateNow();
   var CRLF  = '\r\n';
 
+  // ── Vergangene gelöschte Termine bereinigen ───────────────────
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  store.geloeschte = (store.geloeschte || []).filter(function(g) {
+    if (!g.date) return false;
+    var d = new Date(g.date); d.setHours(0, 0, 0, 0);
+    return d >= today;  // nur zukünftige behalten
+  });
+  // Bereinigte Liste zurück auf GitHub schreiben (async, kein await — läuft im Hintergrund)
+  if (store._sha) saveGeloeschteGH();
+
   lines.push('BEGIN:VCALENDAR');
   lines.push('VERSION:2.0');
   lines.push('PRODID:-//FwDemling//DE Kalender//DE');
@@ -72,6 +82,7 @@ function buildLocalICS(events) {
   lines.push('END:STANDARD');
   lines.push('END:VTIMEZONE');
 
+  // ── Aktive Termine ────────────────────────────────────────────
   for (var i = 0; i < events.length; i++) {
     var e       = events[i];
     var uid     = e.id + '@fw-terminplaner';
@@ -131,6 +142,31 @@ function buildLocalICS(events) {
       }
     });
 
+    lines.push('END:VEVENT');
+  }
+
+  // ── Abgesagte Termine (CANCELLED) ────────────────────────────
+  for (var j = 0; j < store.geloeschte.length; j++) {
+    var g        = store.geloeschte[j];
+    var gUid     = g.uid + '@fw-terminplaner';
+    var gSummary = icsEscape('[ABGESAGT] ' + (g.title || '(kein Titel)'));
+    var gDate    = g.date ? g.date.replace(/-/g, '') : icsDateNow().slice(0, 8);
+    var gDateEnd = g.date
+      ? (function() {
+          var gd = new Date(g.date); gd.setDate(gd.getDate() + 1);
+          return gd.toISOString().slice(0, 10).replace(/-/g, '');
+        })()
+      : gDate;
+
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + gUid);
+    lines.push('DTSTAMP:' + now);
+    lines.push('DTSTART;VALUE=DATE:' + gDate);
+    lines.push('DTEND;VALUE=DATE:' + gDateEnd);
+    lines.push('SUMMARY:' + gSummary);
+    lines.push('STATUS:CANCELLED');
+    lines.push('TRANSP:TRANSPARENT');
+    lines.push('SEQUENCE:' + Math.floor(Date.now() / 1000));
     lines.push('END:VEVENT');
   }
 

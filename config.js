@@ -28,7 +28,8 @@ const CONFIG = {
   // 📄 Dateinamen im privaten Repo
   FILE_EVENTS:      "termine.json",
   FILE_TEMPLATES:   "vorlagen.json",
-  FILE_GEBURTSTAGE: "geburtstage.json"
+  FILE_GEBURTSTAGE: "geburtstage.json",
+  FILE_GELOESCHTE:  "geloeschte_termine.json"
 };
 
 /* =========================
@@ -38,7 +39,8 @@ const CONFIG = {
 const store = {
   events:      [],
   templates:   [],
-  geburtstage: []
+  geburtstage: [],
+  geloeschte:  []   // gelöschte Termin-UIDs für ICS CANCELLED
   // Alle Daten kommen von GitHub – nichts mehr lokal im localStorage
 };
 

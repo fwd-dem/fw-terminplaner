@@ -263,11 +263,12 @@ async function loadAllData() {
     return;
   }
 
-  // Alle drei Dateien parallel laden
-  const [termine, vorlagen, geburtstage] = await Promise.all([
+  // Alle vier Dateien parallel laden
+  const [termine, vorlagen, geburtstage, geloeschte] = await Promise.all([
     ghReadJSON(CONFIG.FILE_EVENTS),
     ghReadJSON(CONFIG.FILE_TEMPLATES),
-    ghReadJSON(CONFIG.FILE_GEBURTSTAGE)
+    ghReadJSON(CONFIG.FILE_GEBURTSTAGE),
+    ghReadJSON(CONFIG.FILE_GELOESCHTE)
   ]);
 
   // Token ungültig → einmal melden, nicht dreifach
@@ -283,12 +284,14 @@ async function loadAllData() {
   store.events      = termine.data      || [];
   store.templates   = vorlagen.data     || [];
   store.geburtstage = geburtstage.data  || [];
+  store.geloeschte  = geloeschte.data   || [];
 
   // SHAs merken – werden beim nächsten Schreiben benötigt
   store._sha = {
     events:      termine.sha,
     templates:   vorlagen.sha,
-    geburtstage: geburtstage.sha
+    geburtstage: geburtstage.sha,
+    geloeschte:  geloeschte.sha
   };
 
   render();
@@ -327,6 +330,16 @@ async function saveGeburtstageGH() {
     store._sha?.geburtstage
   );
   if (result.ok) store._sha.geburtstage = result.sha;
+  return result;
+}
+
+async function saveGeloeschteGH() {
+  const result = await ghWriteJSON(
+    CONFIG.FILE_GELOESCHTE,
+    store.geloeschte,
+    store._sha?.geloeschte
+  );
+  if (result.ok) store._sha.geloeschte = result.sha;
   return result;
 }
 
