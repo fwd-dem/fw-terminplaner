@@ -15,11 +15,12 @@ const CONFIG = {
   DATA_REPO:   "fw-terminplaner-data",
   DATA_BRANCH: "main",
 
-  // 📅 Öffentliches Repo: ICS-Datei
-  ICS_OWNER:   "fwd-dem",
-  ICS_REPO:    "fw-demling-termine",
-  ICS_BRANCH:  "main",
-  ICS_FILE:    "fw_demling_termine.ics",
+  // 📅 Öffentliches Repo: ICS-Dateien
+  ICS_OWNER:        "fwd-dem",
+  ICS_REPO:         "fw-demling-termine",
+  ICS_BRANCH:       "main",
+  ICS_FILE:         "fw_demling_termine.ics",          // Feed (mit CANCELLED)
+  ICS_FILE_DOWNLOAD: "fw_demling_termine_download.ics", // Download (ohne CANCELLED)
 
   // 🌐 App-Repo (GitHub Pages)
   APP_OWNER:   "fwd-dem",

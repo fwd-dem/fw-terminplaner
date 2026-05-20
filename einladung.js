@@ -229,8 +229,9 @@ async function generateEinladungPDF() {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (icsEvents.length > 0) {
-    const icsContent = buildLocalICS(icsEvents);
-    const icsResult  = await pushICSToGitHub(icsContent);
+    const feedContent     = buildLocalICS(icsEvents);      // Feed: mit CANCELLED
+    const downloadContent = buildDownloadICS(icsEvents);   // Download: ohne CANCELLED
+    const icsResult       = await pushICSToGitHub(feedContent, downloadContent);
     if (icsResult.ok) {
       showToastMsg("✅ Kalender aktualisiert");
     } else if (icsResult.reason !== "kein_token") {

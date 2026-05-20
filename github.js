@@ -164,14 +164,9 @@ async function ghWriteJSON(filename, data, sha) {
    📅 ICS ZU GITHUB PUSHEN
 ========================= */
 
-async function pushICSToGitHub(icsContent) {
-  const token = loadGithubToken();
-  if (!token) {
-    console.warn("Kein GitHub Token — ICS wird nicht hochgeladen.");
-    return { ok: false, reason: "kein_token" };
-  }
-
-  const url = `https://api.github.com/repos/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/contents/${CONFIG.ICS_FILE}`;
+// Hilfsfunktion: eine einzelne ICS-Datei pushen
+async function pushSingleICS(icsContent, filename, token) {
+  const url = `https://api.github.com/repos/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/contents/${filename}`;
 
   // Bestehende SHA holen (nötig für Update)
   let sha = null;
@@ -207,13 +202,33 @@ async function pushICSToGitHub(icsContent) {
     });
 
     if (putRes.ok) return { ok: true };
-
     const err = await putRes.json().catch(() => ({}));
     return { ok: false, reason: err.message || "unbekannt" };
-
   } catch(e) {
     return { ok: false, reason: e.message };
   }
+}
+
+// Beide ICS-Dateien parallel pushen
+async function pushICSToGitHub(feedContent, downloadContent) {
+  const token = loadGithubToken();
+  if (!token) {
+    console.warn("Kein GitHub Token — ICS wird nicht hochgeladen.");
+    return { ok: false, reason: "kein_token" };
+  }
+
+  const [feedResult, downloadResult] = await Promise.all([
+    pushSingleICS(feedContent,     CONFIG.ICS_FILE,          token),
+    pushSingleICS(downloadContent, CONFIG.ICS_FILE_DOWNLOAD,  token)
+  ]);
+
+  if (feedResult.ok && downloadResult.ok) return { ok: true };
+
+  // Einen oder beide fehlgeschlagen
+  const reason = !feedResult.ok
+    ? `Feed: ${feedResult.reason}`
+    : `Download: ${downloadResult.reason}`;
+  return { ok: false, reason };
 }
 
 /* =========================
