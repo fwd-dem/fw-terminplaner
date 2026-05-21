@@ -340,11 +340,6 @@
       <textarea id="einladung-geburtstag" class="einladung-textarea" placeholder="Namen der Geburtstagskinder…" rows="2"></textarea>
     </div>
 
-    <div class="einladung-block einladung-links">
-      <span class="einladung-label">📥 Termine herunterladen:</span>
-      <span class="einladung-value einladung-link-text">https://raw.githubusercontent.com/fwd-dem/fw-demling-termine/main/fw_demling_termine.ics</span>
-    </div>
-
     <div class="einladung-block">
       <span class="einladung-label">Hinweis: <span style="font-size:11px;color:#aaa;">(optional)</span></span>
       <textarea id="einladung-hinweis" class="einladung-textarea" placeholder="Optionaler Hinweis…" rows="2"></textarea>
@@ -460,10 +455,13 @@
   </div>
 
   <div class="form-section">
-    <label>📅 ICS-Kalender URL</label>
-    <p id="ics-url" style="font-size:11px;color:#1a50b4;word-break:break-all;margin:4px 0;"></p>
+    <label>📅 ICS-Kalender</label>
+    <p style="font-size:12px;color:#444;margin:4px 0 2px;">🍎 Feed (iPhone/Abo):</p>
+    <p id="ics-url-feed" style="font-size:11px;color:#1a50b4;word-break:break-all;margin:0 0 8px;"></p>
+    <p style="font-size:12px;color:#444;margin:4px 0 2px;">📥 Download (Android):</p>
+    <p id="ics-url-download" style="font-size:11px;color:#1a50b4;word-break:break-all;margin:0 0 8px;"></p>
     <p style="font-size:11px;color:#888;margin:0;">
-      Diese URL wird beim PDF-Erstellen automatisch aktualisiert.
+      Diese URLs werden beim PDF-Erstellen automatisch aktualisiert.
     </p>
   </div>
 

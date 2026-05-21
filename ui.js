@@ -31,9 +31,13 @@ function showScreen(screen) {
       tokenEl.style.background = hasToken ? "#d4f5d4" : "#ffd6d6";
       tokenEl.oninput = () => { tokenEl.style.background = "#eaeaea"; };
     }
-    const icsUrlEl = document.getElementById("ics-url");
-    if (icsUrlEl) {
-      icsUrlEl.textContent = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
+    const feedEl = document.getElementById("ics-url-feed");
+    if (feedEl) {
+      feedEl.textContent = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE}`;
+    }
+    const downloadEl = document.getElementById("ics-url-download");
+    if (downloadEl) {
+      downloadEl.textContent = `https://raw.githubusercontent.com/${CONFIG.ICS_OWNER}/${CONFIG.ICS_REPO}/${CONFIG.ICS_BRANCH}/${CONFIG.ICS_FILE_DOWNLOAD}`;
     }
   }
 
