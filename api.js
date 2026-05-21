@@ -108,12 +108,8 @@ async function deleteEventFromGitHub(id) {
     }
   }
 
-  // Beide Dateien speichern
-  const [resultEvents, resultGel] = await Promise.all([
-    saveEvents(),
-    saveGeloeschteGH()
-  ]);
-
+  // Sequenziell speichern (nicht parallel — SHA-Konflikt vermeiden)
+  const resultEvents = await saveEvents();
   if (!resultEvents.ok) {
     store.events     = backup;
     store.geloeschte = backupGel;
@@ -123,6 +119,15 @@ async function deleteEventFromGitHub(id) {
       text: `Fehler: ${resultEvents.reason}\n\nBitte versuche es erneut.`,
       onConfirm: () => {}
     });
+    return;
+  }
+
+  // Dann geloeschte_termine.json
+  const resultGel = await saveGeloeschteGH();
+  if (!resultGel.ok) {
+    // termine.json wurde gespeichert, geloeschte nicht — kein Rollback nötig
+    // Termin ist gelöscht, nur CANCELLED fehlt — akzeptabler Zustand
+    console.warn("geloeschte_termine.json konnte nicht gespeichert werden:", resultGel.reason);
   }
 }
 

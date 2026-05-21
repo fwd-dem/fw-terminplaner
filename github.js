@@ -209,7 +209,7 @@ async function pushSingleICS(icsContent, filename, token) {
   }
 }
 
-// Beide ICS-Dateien parallel pushen
+// Beide ICS-Dateien sequenziell pushen (nicht parallel — SHA-Konflikt vermeiden)
 async function pushICSToGitHub(feedContent, downloadContent) {
   const token = loadGithubToken();
   if (!token) {
@@ -217,18 +217,15 @@ async function pushICSToGitHub(feedContent, downloadContent) {
     return { ok: false, reason: "kein_token" };
   }
 
-  const [feedResult, downloadResult] = await Promise.all([
-    pushSingleICS(feedContent,     CONFIG.ICS_FILE,          token),
-    pushSingleICS(downloadContent, CONFIG.ICS_FILE_DOWNLOAD,  token)
-  ]);
+  // Feed zuerst
+  const feedResult = await pushSingleICS(feedContent, CONFIG.ICS_FILE, token);
+  if (!feedResult.ok) return { ok: false, reason: `Feed: ${feedResult.reason}` };
 
-  if (feedResult.ok && downloadResult.ok) return { ok: true };
+  // Dann Download
+  const downloadResult = await pushSingleICS(downloadContent, CONFIG.ICS_FILE_DOWNLOAD, token);
+  if (!downloadResult.ok) return { ok: false, reason: `Download: ${downloadResult.reason}` };
 
-  // Einen oder beide fehlgeschlagen
-  const reason = !feedResult.ok
-    ? `Feed: ${feedResult.reason}`
-    : `Download: ${downloadResult.reason}`;
-  return { ok: false, reason };
+  return { ok: true };
 }
 
 /* =========================
