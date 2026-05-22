@@ -36,6 +36,7 @@ function exportICS() {
   a.download = 'FW-Demling-Termine-' + date + '.ics';
   a.click();
   URL.revokeObjectURL(url);
+  showToastMsg('📅 ICS-Datei wird heruntergeladen');
 }
 
 /* =========================
