@@ -37,9 +37,12 @@ async function saveTemplate() {
     return;
   }
 
-  if (editTplIndex !== null) {
-    store.templates[editTplIndex] = tpl;
-    editTplIndex = null;
+  // Index und alten Wert sichern – werden für Rollback benötigt
+  const savedIndex = editTplIndex;
+  const oldTpl     = savedIndex !== null ? store.templates[savedIndex] : null;
+
+  if (savedIndex !== null) {
+    store.templates[savedIndex] = tpl;
   } else {
     store.templates.push(tpl);
   }
@@ -51,11 +54,12 @@ async function saveTemplate() {
   _tplSaving = false;
 
   if (ok) {
+    editTplIndex = null;  // erst nach erfolgreichem Speichern zurücksetzen
     showScreen("templates");
   } else {
-    // Rollback
-    if (editTplIndex !== null) {
-      store.templates[editTplIndex] = tpl;
+    // Rollback mit gesicherten Werten
+    if (savedIndex !== null) {
+      store.templates[savedIndex] = oldTpl;
     } else {
       store.templates.pop();
     }
