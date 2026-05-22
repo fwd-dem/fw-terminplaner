@@ -354,17 +354,17 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
     return (text || "").replace(/[^\x00-\xFF]/g, "").trim();
   }
 
-  function addText(text, opts = {}) {
+  function addText(text, opts = {}, measure = measureOnly) {
     const { size = CONTENT_SIZE, bold = false, color = DARK, indent = 0, after = 4 } = opts;
     doc.setFontSize(size);
     doc.setFont(FONT, bold ? "bold" : "normal");
     doc.setTextColor(...color);
     const lines = doc.splitTextToSize(clean(text), usable - indent);
-    if (!measureOnly) doc.text(lines, margin + indent, y);
+    if (!measure) doc.text(lines, margin + indent, y);
     y += lines.length * (size * 0.38) + after;
   }
 
-  function addParagraphs(text, opts = {}) {
+  function addParagraphs(text, opts = {}, measure = measureOnly) {
     const { size = CONTENT_SIZE, color = DARK, indent = 0, paraAfter = 4, bullets = false } = opts;
     const paragraphs = clean(text).split("\n")
       .map(p => p.trim().replace(/^•\s*/, ""))  // • am Zeilenanfang entfernen
@@ -380,7 +380,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
       if (useBullets) {
         // Flammen-Bullet via icons.js
         const lines = doc.splitTextToSize(para.trim(), usable - indent - bulletW);
-        if (!measureOnly) {
+        if (!measure) {
           drawIcon(doc, "flame", margin + indent, y - 3, 4, icons);
           doc.setFontSize(size);
           doc.setFont(FONT, "normal");
@@ -390,21 +390,18 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : 2);
       } else {
         const lines = doc.splitTextToSize(para.trim(), usable - indent);
-        if (!measureOnly) doc.text(lines, margin + indent, y);
+        if (!measure) doc.text(lines, margin + indent, y);
         y += lines.length * (size * 0.38) + (i < paragraphs.length - 1 ? paraAfter : 2);
       }
     });
   }
 
   function drawSection(iconType, iconColor, labelText, contentFn) {
-    // Höhe messen — temporär measureOnly aktivieren
-    const wasMeasuring = measureOnly;
-    measureOnly = true;
+    // Höhe messen — contentFn einmal mit measure=true aufrufen (kein Mutieren von measureOnly)
     const savedY = y;
-    contentFn();
+    contentFn(true);
     const contentH = y - savedY;
     y = savedY;
-    measureOnly = wasMeasuring;
 
     const totalH = PAD_TOP + LABEL_H + contentH + PAD_BOTTOM;
     const startY = y;
@@ -429,7 +426,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
     y = startY + PAD_TOP + LABEL_H;
 
     if (!measureOnly) doc.setTextColor(...DARK);
-    contentFn();
+    contentFn(measureOnly);
 
     // y exakt auf Ende der Box setzen — ignoriert was contentFn mit y gemacht hat
     y = startY + totalH;
@@ -479,7 +476,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   const wannItems     = wannContainer ? wannContainer.querySelectorAll("[id^='einladung-thema-']") : [];
   const wannLabels    = wannContainer ? wannContainer.querySelectorAll(".einladung-wann-row") : [];
 
-  drawSection("calendar_lines", RED, "Übungstermine", () => {
+  drawSection("calendar_lines", RED, "Übungstermine", (measure) => {
     if (wannLabels.length === 0) {
       addText("Keine Termine eingetragen", { color: GREY, indent: 9, after: 1 });
     } else {
@@ -493,7 +490,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         const descVal = wannItems[i] ? wannItems[i].value.trim() : "";
 
         // Bullet-Icon
-        if (wannLabels.length > 1 && !measureOnly) {
+        if (wannLabels.length > 1 && !measure) {
           drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
         }
 
@@ -502,14 +499,14 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         doc.setFont(FONT, "bold");
         doc.setTextColor(...DARK);
         const datLines = doc.splitTextToSize(clean(datStr), textW);
-        if (!measureOnly) doc.text(datLines, textIndent, y);
+        if (!measure) doc.text(datLines, textIndent, y);
         y += datLines.length * (CONTENT_SIZE * 0.38);
 
         // Beschreibung in normal
         if (descVal) {
           doc.setFont(FONT, "normal");
           const descLines = doc.splitTextToSize(clean(descVal), textW);
-          if (!measureOnly) doc.text(descLines, textIndent, y + 1);
+          if (!measure) doc.text(descLines, textIndent, y + 1);
           y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
           y += isLast ? 2 : 4;
         } else {
@@ -520,7 +517,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   });
 
   // ── ORT ───────────────────────────────────────────────────────
-  drawSection("pin", RED, "Ort", () => {
+  drawSection("pin", RED, "Ort", (measure) => {
     addText("Feuerwehrgerätehaus (FWGH)", { indent: 9 });
   });
 
@@ -541,7 +538,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   const hasInfoFrei    = infoFrei.length > 0;
 
   if (hasInfoTermine || hasInfoFrei) {
-    drawSection("info", RED, "Weitere Termine", () => {
+    drawSection("info", RED, "Weitere Termine", (measure) => {
       const totalItems  = infoTermineLabels.length +
         (hasInfoFrei ? infoFrei.split("\n").filter(l => l.trim()).length : 0);
       const useBullets  = totalItems > 1;
@@ -556,7 +553,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         const descVal     = infoTermineItems[i] ? infoTermineItems[i].value.trim() : "";
 
         // Bullet-Icon
-        if (useBullets && !measureOnly) {
+        if (useBullets && !measure) {
           drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
         }
 
@@ -565,14 +562,14 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         doc.setFont(FONT, "bold");
         doc.setTextColor(...DARK);
         const titelLines = doc.splitTextToSize(clean(titelStr), textW);
-        if (!measureOnly) doc.text(titelLines, textIndent, y);
+        if (!measure) doc.text(titelLines, textIndent, y);
         y += titelLines.length * (CONTENT_SIZE * 0.38);
 
         // Beschreibung normal
         if (descVal) {
           doc.setFont(FONT, "normal");
           const descLines = doc.splitTextToSize(clean(descVal), textW);
-          if (!measureOnly) doc.text(descLines, textIndent, y + 1);
+          if (!measure) doc.text(descLines, textIndent, y + 1);
           y += descLines.length * (CONTENT_SIZE * 0.38) + 1;
         }
         y += isLastBlock ? 2 : 4;
@@ -587,7 +584,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
         freiLines.forEach((line, i) => {
           const isLast = i === freiLines.length - 1;
 
-          if (useBullets && !measureOnly) {
+          if (useBullets && !measure) {
             drawIcon(doc, "flame", margin + 9, y - 3, 4, icons);
           }
 
@@ -595,7 +592,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
           doc.setFont(FONT, "normal");
           doc.setTextColor(...DARK);
           const lines = doc.splitTextToSize(clean(line), textW);
-          if (!measureOnly) doc.text(lines, textIndent, y);
+          if (!measure) doc.text(lines, textIndent, y);
           y += lines.length * (CONTENT_SIZE * 0.38) + (isLast ? 2 : 4);
         });
       }
@@ -605,7 +602,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   // ── HINWEIS ───────────────────────────────────────────────────
   const hinweis = document.getElementById("einladung-hinweis")?.value.trim();
   if (hinweis) {
-    drawSection("star", RED, "Hinweis", () => {
+    drawSection("star", RED, "Hinweis", (measure) => {
       addParagraphs(hinweis, { indent: 9, bullets: true });
     });
   }
@@ -616,7 +613,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   if (geburtstag && gbBlockEl && gbBlockEl.style.display !== "none") {
     const activeMonthBtn = document.querySelector("#month-selector .allday-btn.active");
     const monatsname     = activeMonthBtn ? activeMonthBtn.textContent.split(" ")[0] : "";
-    drawSection("cake", RED, "Geburtstage im " + monatsname, () => {
+    drawSection("cake", RED, "Geburtstage im " + monatsname, (measure) => {
       // Namen kommagetrennt, aber nie einen Namen umbrechen
       const indent    = 9;
       const maxW      = usable - indent;
@@ -633,7 +630,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
 
         if (testW > maxW && currentLine !== "") {
           // Aktuelle Zeile ausgeben, Name in neue Zeile
-          if (!measureOnly) {
+          if (!measure) {
             doc.setTextColor(...DARK);
             doc.text(clean(currentLine), margin + indent, y);
           }
@@ -646,7 +643,7 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
 
       // Letzte Zeile ausgeben
       if (currentLine) {
-        if (!measureOnly) {
+        if (!measure) {
           doc.setTextColor(...DARK);
           doc.text(clean(currentLine), margin + indent, y);
         }
