@@ -11,6 +11,12 @@
 // ============================================================
 
 /* =========================
+   🔒 SAVE LOCK
+========================= */
+
+let _eventSaving = false;  // verhindert gleichzeitige GitHub-Writes bei Terminen
+
+/* =========================
    🟢 STATUS DOT
 ========================= */
 
@@ -38,6 +44,15 @@ function setStatusDot(state) {
 
 // Neuen Termin anlegen oder bestehenden aktualisieren
 async function saveEventToGitHub(eventData, existingId) {
+  if (_eventSaving) {
+    showModal({
+      title: "⏳ Bitte warten",
+      text: "Ein Speichervorgang läuft bereits. Bitte kurz warten und erneut versuchen.",
+      onConfirm: () => {}
+    });
+    return false;
+  }
+  _eventSaving = true;
   setSaveButtonState(true);
 
   try {
@@ -74,12 +89,22 @@ async function saveEventToGitHub(eventData, existingId) {
     });
     return false;
   } finally {
+    _eventSaving = false;
     setSaveButtonState(false);
   }
 }
 
 // Termin löschen
 async function deleteEventFromGitHub(id) {
+  if (_eventSaving) {
+    showModal({
+      title: "⏳ Bitte warten",
+      text: "Ein Speichervorgang läuft bereits. Bitte kurz warten und erneut versuchen.",
+      onConfirm: () => {}
+    });
+    return;
+  }
+  _eventSaving = true;
   const backup        = [...store.events];
   const backupGel     = [...store.geloeschte];
 
@@ -127,6 +152,7 @@ async function deleteEventFromGitHub(id) {
       text: `Fehler: ${resultEvents.reason}\n\nBitte versuche es erneut.`,
       onConfirm: () => {}
     });
+    _eventSaving = false;
     return;
   }
 
@@ -137,6 +163,7 @@ async function deleteEventFromGitHub(id) {
     // Termin ist gelöscht, nur CANCELLED fehlt — akzeptabler Zustand
     console.warn("geloeschte_termine.json konnte nicht gespeichert werden:", resultGel.reason);
   }
+  _eventSaving = false;
 }
 
 // Mehrere vergangene Termine auf einmal löschen
