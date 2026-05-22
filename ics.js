@@ -148,15 +148,15 @@ function buildLocalICS(events) {
   var now   = icsDateNow();
   var CRLF  = '\r\n';
 
-  // ── Vergangene gelöschte Termine bereinigen ───────────────────
+  // ── Vergangene gelöschte Termine bereinigen (nur im Speicher) ─
+  // Das Speichern auf GitHub übernimmt deleteEventFromGitHub in api.js,
+  // damit kein SHA-Konflikt mit laufenden Schreiboperationen entsteht.
   var today = new Date(); today.setHours(0, 0, 0, 0);
   store.geloeschte = (store.geloeschte || []).filter(function(g) {
     if (!g.date) return false;
     var d = new Date(g.date); d.setHours(0, 0, 0, 0);
     return d >= today;  // nur zukünftige behalten
   });
-  // Bereinigte Liste zurück auf GitHub schreiben (async, kein await — läuft im Hintergrund)
-  if (store._sha) saveGeloeschteGH();
 
   lines.push('BEGIN:VCALENDAR');
   lines.push('VERSION:2.0');

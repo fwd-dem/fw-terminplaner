@@ -108,6 +108,14 @@ async function deleteEventFromGitHub(id) {
     }
   }
 
+  // Vergangene Einträge aus geloeschte bereinigen (war vorher in buildLocalICS)
+  const todayClean = new Date(); todayClean.setHours(0, 0, 0, 0);
+  store.geloeschte = store.geloeschte.filter(g => {
+    if (!g.date) return false;
+    const d = new Date(g.date); d.setHours(0, 0, 0, 0);
+    return d >= todayClean;
+  });
+
   // Sequenziell speichern (nicht parallel — SHA-Konflikt vermeiden)
   const resultEvents = await saveEvents();
   if (!resultEvents.ok) {
