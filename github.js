@@ -296,14 +296,22 @@ async function loadAllData() {
   store.events      = termine.data      || [];
   store.templates   = vorlagen.data     || [];
   store.geburtstage = geburtstage.data  || [];
-  store.geloeschte  = geloeschte.data   || [];
+
+  // geloeschte_termine.json existiert bei Neuinstallation noch nicht → 404 ist kein Fehler
+  if (geloeschte.reason === "nicht_gefunden") {
+    console.info("geloeschte_termine.json noch nicht vorhanden — wird beim ersten Löschen angelegt.");
+    store.geloeschte = [];
+  } else {
+    store.geloeschte = geloeschte.data || [];
+  }
 
   // SHAs merken – werden beim nächsten Schreiben benötigt
+  // geloeschte.sha ist undefined wenn Datei noch nicht existiert → ghWriteJSON legt sie neu an
   store._sha = {
     events:      termine.sha,
     templates:   vorlagen.sha,
     geburtstage: geburtstage.sha,
-    geloeschte:  geloeschte.sha
+    geloeschte:  geloeschte.sha  // undefined = neue Datei, sha = Update
   };
 
   render();
