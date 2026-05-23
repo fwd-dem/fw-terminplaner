@@ -74,31 +74,23 @@ function render() {
   const list = document.getElementById("eventList");
   list.innerHTML = "";
 
-  const showCancelled = activeFilters.includes("cancelled");
+  const filterPlanned   = activeFilters.includes("planned");
+  const filterCancelled = activeFilters.includes("cancelled");
+  const catFilters      = activeFilters.filter(f => f !== "planned" && f !== "cancelled");
+
+  // Default: beide anzeigen. Filter "Geplant" oder "Abgesagt" schränken ein.
+  const showActive    = !filterCancelled || filterPlanned;
+  const showCancelled = !filterPlanned   || filterCancelled;
 
   // Aktive Termine
-  let events = [...store.events];
-  if (activeFilters.length > 0 && !(activeFilters.length === 1 && showCancelled)) {
-    const catFilters = activeFilters.filter(f => f !== "cancelled");
-    if (catFilters.length > 0) events = events.filter(e => catFilters.includes(e.category));
-  }
-  if (showCancelled && activeFilters.length === 1) {
-    // Nur "Abgesagt" aktiv → keine aktiven Termine anzeigen
-    events = [];
-  }
-  if (hidePast) {
-    events = events.filter(e => !isPast(e.date));
-  }
+  let events = showActive ? [...store.events] : [];
+  if (catFilters.length > 0) events = events.filter(e => catFilters.includes(e.category));
+  if (hidePast) events = events.filter(e => !isPast(e.date));
 
-  // Abgesagte Termine einmischen
-  let cancelled = [...(store.geloeschte || [])];
-  if (!showCancelled) {
-    cancelled = [];  // Abgesagte nur anzeigen wenn Filter aktiv
-  } else {
-    const catFilters = activeFilters.filter(f => f !== "cancelled");
-    if (catFilters.length > 0) cancelled = cancelled.filter(e => catFilters.includes(e.category));
-    if (hidePast) cancelled = cancelled.filter(e => !isPast(e.date));
-  }
+  // Abgesagte Termine
+  let cancelled = showCancelled ? [...(store.geloeschte || [])] : [];
+  if (catFilters.length > 0) cancelled = cancelled.filter(e => catFilters.includes(e.category));
+  if (hidePast) cancelled = cancelled.filter(e => !isPast(e.date));
 
   // Zusammenführen und chronologisch sortieren
   const allCards = [
