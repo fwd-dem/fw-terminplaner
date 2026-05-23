@@ -210,8 +210,15 @@ async function _cancelEvent(event) {
 
   render();
 
-  // Sequenziell speichern
-  const resultEvents = await saveEvents();
+  // Sequenziell speichern — bei SHA-Konflikt (409) einmal neu laden und retry
+  let resultEvents = await saveEvents();
+  if (!resultEvents.ok && resultEvents.reason?.includes("does not match")) {
+    console.warn("SHA-Konflikt bei termine.json — lade SHAs neu und versuche erneut…");
+    const fresh = await ghReadJSON(CONFIG.FILE_EVENTS);
+    if (fresh.ok) store._sha.events = fresh.sha;
+    resultEvents = await saveEvents();
+  }
+
   if (!resultEvents.ok) {
     store.events      = backupEvents;
     store.geloeschte  = backupGeloeschte;
@@ -247,8 +254,15 @@ async function reactivateEventFromGitHub(id, updatedData) {
   store.events.push({ ...updatedData, id });
   render();
 
-  // Sequenziell speichern
-  const resultEvents = await saveEvents();
+  // Sequenziell speichern — bei SHA-Konflikt (409) einmal neu laden und retry
+  let resultEvents = await saveEvents();
+  if (!resultEvents.ok && resultEvents.reason?.includes("does not match")) {
+    console.warn("SHA-Konflikt bei termine.json — lade SHAs neu und versuche erneut…");
+    const fresh = await ghReadJSON(CONFIG.FILE_EVENTS);
+    if (fresh.ok) store._sha.events = fresh.sha;
+    resultEvents = await saveEvents();
+  }
+
   if (!resultEvents.ok) {
     store.events      = backupEvents;
     store.geloeschte  = backupGeloeschte;
