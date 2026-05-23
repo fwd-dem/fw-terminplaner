@@ -244,15 +244,12 @@ async function generateEinladungPDF() {
     .filter(e => { if (!e.date) return false; const d = new Date(e.date); d.setHours(0,0,0,0); return d >= icsToday; })
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  window._icsStatus = null;  // wird nach PDF-Download im Modal angezeigt
   if (icsEvents.length > 0) {
     const feedContent     = buildLocalICS(icsEvents);      // Feed: mit CANCELLED
     const downloadContent = buildDownloadICS(icsEvents);   // Download: ohne CANCELLED
     const icsResult       = await pushICSToGitHub(feedContent, downloadContent);
-    if (icsResult.ok) {
-      showToastMsg("✅ Kalender aktualisiert");
-    } else if (icsResult.reason !== "kein_token") {
-      showToastMsg("⚠️ ICS Upload fehlgeschlagen: " + icsResult.reason);
-    }
+    window._icsStatus = icsResult;
   }
 
   // ── 2. jsPDF LAZY LADEN ───────────────────────────────────────
@@ -340,6 +337,21 @@ async function startPDFGeneration() {
   const monthLabel = activeBtn ? activeBtn.textContent.replace(/\s+/g, "_") : "Einladung";
   real.save("FW_Einladung_" + monthLabel + ".pdf");
   showLoading(false);
+
+  // ── Erfolgsmeldung: PDF + ICS-Status zusammen ─────────────────
+  let statusText = "📄 PDF wurde heruntergeladen.";
+  if (window._icsStatus === null) {
+    statusText += "\n\n📅 Kein ICS-Update (keine zukünftigen Termine).";
+  } else if (window._icsStatus.ok) {
+    statusText += "\n\n✅ Kalender (ICS) wurde erfolgreich aktualisiert.";
+  } else if (window._icsStatus.reason === "kein_token") {
+    statusText += "\n\n⚠️ Kein GitHub Token — Kalender wurde nicht aktualisiert.";
+  } else {
+    statusText += "\n\n❌ Kalender-Update fehlgeschlagen: " + window._icsStatus.reason;
+  }
+  window._icsStatus = null;
+
+  showModal({ title: "✅ Einladung erstellt", text: statusText, onConfirm: () => {} });
 }
 
 /* =========================
