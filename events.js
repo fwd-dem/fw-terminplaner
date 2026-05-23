@@ -168,10 +168,10 @@ function createCancelledCard(e) {
     <div style="font-size:18px; font-weight:bold; margin-top:6px; color:#888; text-decoration:line-through;">
       ${e.title || "(kein Titel)"}
     </div>
-    <div style="font-size:13px; margin-top:4px; color:#999;">
+    <div style="font-size:13px; margin-top:4px; color:#999; text-decoration:line-through;">
       ${e.allday ? "Ganztägig" : "⏰ " + (e.start || "-") + " – " + (e.end || "-")}
     </div>
-    <div style="font-size:13px; margin-top:4px; color:#999;">
+    <div style="font-size:13px; margin-top:4px; color:#999; text-decoration:line-through;">
       📍 ${e.location || "kein Ort"}
     </div>
     <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
