@@ -86,6 +86,23 @@ function buildMonthSelector() {
    📝 EINLADUNG BEFÜLLEN
 ========================= */
 
+// Filtert Ort-Informationen aus e.desc heraus — der Ort hat seinen Platz in der Ort-Section
+function filterOrtAusDesc(desc, location) {
+  if (!desc) return "";
+  const loc = (location || "").trim().toLowerCase();
+  return desc.trim().split("\n").filter(l => {
+    const line = l.trim();
+    if (!line) return false;
+    const lineLower = line.toLowerCase();
+    // Exakt e.location
+    if (loc && lineLower === loc) return false;
+    // Enthält FWGH oder Feuerwehr (alle Varianten)
+    if (lineLower.includes("fwgh")) return false;
+    if (lineLower.startsWith("feuerwehr")) return false;
+    return true;
+  }).join("\n").trim();
+}
+
 function fillEinladung(year, month) {
   // Termine des Monats filtern
   const monthEvents = store.events.filter(e => {
@@ -159,7 +176,7 @@ function fillEinladung(year, month) {
         ta.placeholder     = "Thema / Beschreibung…";
         ta.rows            = 2;
         // Ort nicht in Beschreibung übernehmen — er steht in der Ort-Section
-        ta.value           = e.desc ? e.desc.trim().split("\n").filter(l => l.trim() !== (e.location || "").trim()).join("\n").trim() : "";
+        ta.value           = filterOrtAusDesc(e.desc, e.location);
         ta.style.marginTop = "4px";
         wrapper.appendChild(ta);
 
@@ -200,7 +217,7 @@ function fillEinladung(year, month) {
       ta.placeholder     = "Beschreibung…";
       ta.rows            = 2;
       // Ort nicht in Beschreibung übernehmen — er steht in der Ort-Section
-      ta.value           = e.desc ? e.desc.trim().split("\n").filter(l => l.trim() !== (e.location || "").trim()).join("\n").trim() : "";
+      ta.value           = filterOrtAusDesc(e.desc, e.location);
       wrapper.appendChild(ta);
 
       infoTermineEl.appendChild(wrapper);
