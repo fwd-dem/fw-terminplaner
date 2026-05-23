@@ -94,61 +94,130 @@ async function saveEventToGitHub(eventData, existingId) {
   }
 }
 
-// Termin löschen
-async function deleteEventFromGitHub(id) {
-  if (_eventSaving) {
+// Termin löschen — Dialog nur bei zukünftigen Terminen
+function deleteEventFromGitHub(id) {
+  const event = store.events.find(e => e.id === id);
+  if (!event) return;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d     = new Date(event.date); d.setHours(0, 0, 0, 0);
+  const isFuture = d >= today;
+
+  if (isFuture) {
+    // Zukünftiger Termin → Dialog: Absagen oder Still löschen
+    _showDeleteDialog(event);
+  } else {
+    // Vergangener Termin → direkt still löschen
     showModal({
-      title: "⏳ Bitte warten",
-      text: "Ein Speichervorgang läuft bereits. Bitte kurz warten und erneut versuchen.",
-      onConfirm: () => {}
+      title: "Termin löschen",
+      text: "Diesen vergangenen Termin wirklich löschen?",
+      onConfirm: () => _silentDeleteEvent(id)
     });
+  }
+}
+
+// Dialog: Absagen (CANCELLED im ICS) oder Still löschen
+function _showDeleteDialog(event) {
+  const overlay    = document.getElementById("modal-overlay");
+  const titleEl    = document.getElementById("modal-title");
+  const textEl     = document.getElementById("modal-text");
+  const confirmBtn = document.getElementById("modal-confirm");
+  const cancelBtn  = document.getElementById("modal-cancel");
+  const actions    = document.querySelector(".modal-actions");
+
+  titleEl.textContent = "Termin entfernen";
+  textEl.textContent  = `Was soll mit "${event.title}" passieren?`;
+  overlay.classList.remove("hidden");
+
+  // Dritten Button (Absagen) einmalig anlegen
+  let abortBtn = document.getElementById("modal-abort");
+  if (!abortBtn) {
+    abortBtn = document.createElement("button");
+    abortBtn.id = "modal-abort";
+    abortBtn.style.cssText = "flex:1; padding:10px; border:none; border-radius:12px; cursor:pointer; font-weight:bold;";
+    actions.appendChild(abortBtn);
+  }
+  abortBtn.textContent        = "🚫 Absagen";
+  abortBtn.style.background   = "#ff9800";
+  abortBtn.style.color        = "white";
+  abortBtn.style.display      = "block";
+
+  confirmBtn.textContent      = "🗑️ Löschen";
+  confirmBtn.style.background = "#d32f2f";
+  confirmBtn.style.color      = "white";
+  cancelBtn.textContent       = "Abbrechen";
+
+  confirmBtn.onclick = () => { _resetDeleteDialog(); _silentDeleteEvent(event.id); };
+  abortBtn.onclick   = () => { _resetDeleteDialog(); _cancelEvent(event); };
+  cancelBtn.onclick  = () => { _resetDeleteDialog(); };
+}
+
+function _resetDeleteDialog() {
+  hideModal();
+  const confirmBtn = document.getElementById("modal-confirm");
+  const cancelBtn  = document.getElementById("modal-cancel");
+  const abortBtn   = document.getElementById("modal-abort");
+  if (confirmBtn) { confirmBtn.textContent = "OK"; confirmBtn.style.background = ""; confirmBtn.style.color = ""; }
+  if (cancelBtn)  { cancelBtn.textContent  = "Abbrechen"; }
+  if (abortBtn)   { abortBtn.style.display = "none"; }
+}
+
+// Termin still löschen (kein CANCELLED)
+async function _silentDeleteEvent(id) {
+  if (_eventSaving) {
+    showModal({ title: "⏳ Bitte warten", text: "Ein Speichervorgang läuft bereits.", onConfirm: () => {} });
     return;
   }
   _eventSaving = true;
-  const backup        = [...store.events];
-  const backupGel     = [...store.geloeschte];
+  const backup = [...store.events];
 
-  // Zu löschenden Termin merken (für CANCELLED in ICS)
-  const deletedEvent  = store.events.find(e => e.id === id);
-
-  // Optimistisch entfernen (UI sofort aktualisieren)
   store.events = store.events.filter(e => e.id !== id);
   render();
 
-  // UID in geloeschte_termine.json speichern (nur wenn in der Zukunft)
-  if (deletedEvent) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const d     = new Date(deletedEvent.date); d.setHours(0, 0, 0, 0);
-
-    if (d >= today) {
-      // Noch nicht in der Liste → hinzufügen
-      if (!store.geloeschte.find(g => g.uid === id)) {
-        store.geloeschte.push({
-          uid:       id,
-          title:     deletedEvent.title || "",
-          date:      deletedEvent.date,
-          deletedAt: new Date().toISOString()
-        });
-      }
-    }
-  }
-
-  // Vergangene Einträge aus geloeschte bereinigen (war vorher in buildLocalICS)
-  const todayClean = new Date(); todayClean.setHours(0, 0, 0, 0);
-  store.geloeschte = store.geloeschte.filter(g => {
-    if (!g.date) return false;
-    const d = new Date(g.date); d.setHours(0, 0, 0, 0);
-    return d >= todayClean;
-  });
-
-  // Sequenziell speichern (nicht parallel — SHA-Konflikt vermeiden)
-  const resultEvents = await saveEvents();
-  if (!resultEvents.ok) {
-    store.events     = backup;
-    store.geloeschte = backupGel;
+  const result = await saveEvents();
+  if (!result.ok) {
+    store.events = backup;
     render();
     showModal({
       title: "⚠️ Löschen fehlgeschlagen",
+      text: `Fehler: ${result.reason}\n\nBitte versuche es erneut.`,
+      onConfirm: () => {}
+    });
+  }
+  _eventSaving = false;
+}
+
+// Termin absagen — vollständige Daten in geloeschte_termine.json
+async function _cancelEvent(event) {
+  if (_eventSaving) {
+    showModal({ title: "⏳ Bitte warten", text: "Ein Speichervorgang läuft bereits.", onConfirm: () => {} });
+    return;
+  }
+  _eventSaving = true;
+  const backupEvents    = [...store.events];
+  const backupGeloeschte = [...store.geloeschte];
+
+  // Aus aktiven Terminen entfernen
+  store.events = store.events.filter(e => e.id !== event.id);
+
+  // Vollständige Daten in geloeschte speichern
+  if (!store.geloeschte.find(g => g.id === event.id)) {
+    store.geloeschte.push({
+      ...event,
+      cancelledAt: new Date().toISOString()
+    });
+  }
+
+  render();
+
+  // Sequenziell speichern
+  const resultEvents = await saveEvents();
+  if (!resultEvents.ok) {
+    store.events      = backupEvents;
+    store.geloeschte  = backupGeloeschte;
+    render();
+    showModal({
+      title: "⚠️ Absagen fehlgeschlagen",
       text: `Fehler: ${resultEvents.reason}\n\nBitte versuche es erneut.`,
       onConfirm: () => {}
     });
@@ -156,12 +225,73 @@ async function deleteEventFromGitHub(id) {
     return;
   }
 
-  // Dann geloeschte_termine.json
   const resultGel = await saveGeloeschteGH();
   if (!resultGel.ok) {
-    // termine.json wurde gespeichert, geloeschte nicht — kein Rollback nötig
-    // Termin ist gelöscht, nur CANCELLED fehlt — akzeptabler Zustand
     console.warn("geloeschte_termine.json konnte nicht gespeichert werden:", resultGel.reason);
+  }
+  _eventSaving = false;
+}
+
+// Abgesagten Termin reaktivieren — zurück nach store.events
+async function reactivateEventFromGitHub(id, updatedData) {
+  if (_eventSaving) {
+    showModal({ title: "⏳ Bitte warten", text: "Ein Speichervorgang läuft bereits.", onConfirm: () => {} });
+    return false;
+  }
+  _eventSaving = true;
+  const backupEvents     = [...store.events];
+  const backupGeloeschte = [...store.geloeschte];
+
+  // Aus geloeschte entfernen, in events einfügen
+  store.geloeschte = store.geloeschte.filter(g => g.id !== id);
+  store.events.push({ ...updatedData, id });
+  render();
+
+  // Sequenziell speichern
+  const resultEvents = await saveEvents();
+  if (!resultEvents.ok) {
+    store.events      = backupEvents;
+    store.geloeschte  = backupGeloeschte;
+    render();
+    showModal({
+      title: "⚠️ Reaktivieren fehlgeschlagen",
+      text: `Fehler: ${resultEvents.reason}\n\nBitte versuche es erneut.`,
+      onConfirm: () => {}
+    });
+    _eventSaving = false;
+    return false;
+  }
+
+  const resultGel = await saveGeloeschteGH();
+  if (!resultGel.ok) {
+    console.warn("geloeschte_termine.json konnte nicht gespeichert werden:", resultGel.reason);
+  }
+
+  _eventSaving = false;
+  return true;
+}
+
+// Abgesagten Termin endgültig löschen (kein CANCELLED mehr im ICS)
+async function deleteCancelledEventFromGitHub(id) {
+  if (_eventSaving) {
+    showModal({ title: "⏳ Bitte warten", text: "Ein Speichervorgang läuft bereits.", onConfirm: () => {} });
+    return;
+  }
+  _eventSaving = true;
+  const backup = [...store.geloeschte];
+
+  store.geloeschte = store.geloeschte.filter(g => g.id !== id);
+  render();
+
+  const result = await saveGeloeschteGH();
+  if (!result.ok) {
+    store.geloeschte = backup;
+    render();
+    showModal({
+      title: "⚠️ Löschen fehlgeschlagen",
+      text: `Fehler: ${result.reason}\n\nBitte versuche es erneut.`,
+      onConfirm: () => {}
+    });
   }
   _eventSaving = false;
 }

@@ -257,16 +257,15 @@ document.addEventListener("click", (e) => {
     return;
   }
 
-  // 🗑️ Vergangene löschen
+  // 🗑️ Vergangene löschen (nur aktive, keine abgesagten)
   if (e.target.closest("#deletePast")) {
     const past = store.events.filter(ev => isPast(ev.date));
     if (past.length === 0) return;
 
     showModal({
       title: "Vergangene Termine löschen",
-      text: `${past.length} vergangene Termine wirklich löschen?`,
+      text: `${past.length} vergangene Termine wirklich löschen? Abgesagte Termine bleiben erhalten.`,
       onConfirm: async () => {
-        // Alle vergangenen in einem einzigen GitHub-Write löschen
         await deletePastEventsFromGitHub(past);
       }
     });

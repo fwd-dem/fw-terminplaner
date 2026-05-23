@@ -204,7 +204,8 @@ label {
 #eventFilters .filter-badge[data-cat="group"].selected  { background: #4d79ff; color: white; }
 #eventFilters .filter-badge[data-cat="resp"].selected   { background: #ffcc00; color: #333; }
 #eventFilters .filter-badge[data-cat="club"].selected   { background: #33cc66; color: white; }
-#eventFilters .filter-badge[data-cat="other"].selected  { background: #999; color: white; }
+#eventFilters .filter-badge[data-cat="other"].selected      { background: #999; color: white; }
+#eventFilters .filter-badge[data-cat="cancelled"].selected  { background: #555; color: white; }
 
 #togglePast.selected {
   background: #333;

@@ -314,21 +314,8 @@ async function loadAllData() {
     geloeschte:  geloeschte.sha  // undefined = neue Datei, sha = Update
   };
 
-  // ── Vergangene gelöschte Termine beim App-Start bereinigen ──
-  // Verhindert unbegrenztes Wachstum von geloeschte_termine.json
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const geloeschteVorher = store.geloeschte.length;
-  store.geloeschte = store.geloeschte.filter(g => {
-    if (!g.date) return false;
-    const d = new Date(g.date); d.setHours(0, 0, 0, 0);
-    return d >= todayStart;
-  });
-
-  // Nur speichern wenn sich etwas geändert hat (kein unnötiger GitHub-Write)
-  if (store.geloeschte.length < geloeschteVorher) {
-    console.info(`${geloeschteVorher - store.geloeschte.length} vergangene Einträge aus geloeschte_termine.json bereinigt.`);
-    saveGeloeschteGH();  // bewusst ohne await — läuft im Hintergrund, kein SHA-Konflikt möglich
-  }                       // (keine andere Schreiboperation läuft beim App-Start)
+  // Abgesagte Termine werden nicht mehr automatisch bereinigt —
+  // sie bleiben dauerhaft sichtbar bis sie manuell gelöscht werden.
 
   render();
   renderTemplates();

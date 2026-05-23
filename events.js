@@ -74,31 +74,48 @@ function render() {
   const list = document.getElementById("eventList");
   list.innerHTML = "";
 
-  if (store.events.length === 0) {
-    list.innerHTML = "<p>Keine Termine vorhanden</p>";
-    return;
-  }
+  const showCancelled = activeFilters.includes("cancelled");
 
+  // Aktive Termine
   let events = [...store.events];
-
-  if (activeFilters.length > 0) {
-    events = events.filter(e => activeFilters.includes(e.category));
+  if (activeFilters.length > 0 && !(activeFilters.length === 1 && showCancelled)) {
+    const catFilters = activeFilters.filter(f => f !== "cancelled");
+    if (catFilters.length > 0) events = events.filter(e => catFilters.includes(e.category));
+  }
+  if (showCancelled && activeFilters.length === 1) {
+    // Nur "Abgesagt" aktiv → keine aktiven Termine anzeigen
+    events = [];
   }
   if (hidePast) {
     events = events.filter(e => !isPast(e.date));
   }
 
-  if (events.length === 0) {
-    list.innerHTML = `
-      <div class="card" style="text-align:center; color:#777; padding:20px;">
-        🔍 nichts gefunden
-      </div>`;
+  // Abgesagte Termine einmischen
+  let cancelled = [...(store.geloeschte || [])];
+  if (!showCancelled) {
+    cancelled = [];  // Abgesagte nur anzeigen wenn Filter aktiv
+  } else {
+    const catFilters = activeFilters.filter(f => f !== "cancelled");
+    if (catFilters.length > 0) cancelled = cancelled.filter(e => catFilters.includes(e.category));
+    if (hidePast) cancelled = cancelled.filter(e => !isPast(e.date));
+  }
+
+  // Zusammenführen und chronologisch sortieren
+  const allCards = [
+    ...events.map(e => ({ ...e, _cancelled: false })),
+    ...cancelled.map(e => ({ ...e, _cancelled: true }))
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  if (allCards.length === 0) {
+    list.innerHTML = store.events.length === 0 && (store.geloeschte || []).length === 0
+      ? "<p>Keine Termine vorhanden</p>"
+      : `<div class="card" style="text-align:center; color:#777; padding:20px;">🔍 nichts gefunden</div>`;
     return;
   }
 
-  events
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .forEach(e => list.appendChild(createEventCard(e)));
+  allCards.forEach(e => list.appendChild(
+    e._cancelled ? createCancelledCard(e) : createEventCard(e)
+  ));
 
   list.style.marginTop = "20px";
 }
@@ -138,6 +155,49 @@ function createEventCard(e) {
     <div style="margin-top:10px;">
       <button onclick="editEvent('${e.id}')">✏️ Bearbeiten</button>
       <button onclick="deleteEvent('${e.id}')">🗑️ Löschen</button>
+    </div>`;
+
+  return card;
+}
+
+function createCancelledCard(e) {
+  const card     = document.createElement("div");
+  card.className = "card";
+  card.dataset.id         = e.id;
+  card.style.background   = "#f0f0f0";
+  card.style.marginBottom = "12px";
+  card.style.padding      = "16px";
+  card.style.opacity      = "0.8";
+
+  const meta = getCategoryMeta(e.category);
+
+  card.innerHTML = `
+    <div style="font-size:13px; color:#999;">📅 ${formatEventDate(e)}</div>
+    <div style="font-size:18px; font-weight:bold; margin-top:6px; color:#888; text-decoration:line-through;">
+      ${e.title || "(kein Titel)"}
+    </div>
+    <div style="font-size:13px; margin-top:4px; color:#999;">
+      ${e.allday ? "Ganztägig" : "⏰ " + (e.start || "-") + " – " + (e.end || "-")}
+    </div>
+    <div style="font-size:13px; margin-top:4px; color:#999;">
+      📍 ${e.location || "kein Ort"}
+    </div>
+    <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+      <div style="
+        background:${meta.color};
+        color:${e.category === 'resp' ? '#333' : 'white'};
+        padding:3px 8px; border-radius:12px; font-size:11px;">
+        ${meta.text}
+      </div>
+      <div style="
+        background:#888; color:white;
+        padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">
+        🚫 ABGESAGT
+      </div>
+    </div>
+    <div style="margin-top:10px;">
+      <button onclick="reactivateEvent('${e.id}')">♻️ Reaktivieren</button>
+      <button onclick="deleteCancelledEvent('${e.id}')">🗑️ Löschen</button>
     </div>`;
 
   return card;
@@ -218,7 +278,14 @@ async function saveEventForce() {
     reminder2: document.getElementById("reminder2").value
   };
 
-  const ok = await saveEventToGitHub(eventData, editEventIndex);
+  let ok;
+  if (_reactivatingId) {
+    // Reaktivierung: abgesagten Termin zurück nach termine.json
+    ok = await reactivateEventFromGitHub(_reactivatingId, eventData);
+    if (ok) _reactivatingId = null;
+  } else {
+    ok = await saveEventToGitHub(eventData, editEventIndex);
+  }
 
   if (ok) {
     editEventIndex = null;
@@ -273,19 +340,62 @@ function editEvent(id) {
 }
 
 function deleteEvent(id) {
+  const card = document.querySelector(`[data-id="${id}"]`);
+  if (card) card.style.opacity = "0.4";
+  deleteEventFromGitHub(id);  // Dialog (Absagen/Löschen) ist in api.js
+}
+
+function deleteCancelledEvent(id) {
   showModal({
-    title: "Termin löschen",
-    text: "Diesen Termin wirklich löschen?",
-    onConfirm: async () => {
-      const card = document.querySelector(`[data-id="${id}"]`);
-      if (card) card.style.opacity = "0.4";
-      await deleteEventFromGitHub(id);
-    }
+    title: "Abgesagten Termin löschen",
+    text: "Diesen Termin endgültig löschen? Er verschwindet auch aus dem Kalender-Abo.",
+    onConfirm: () => deleteCancelledEventFromGitHub(id)
   });
 }
 
+// Globale Variable: wird bei Reaktivierung gesetzt
+let _reactivatingId = null;
+
+function reactivateEvent(id) {
+  const e = (store.geloeschte || []).find(g => g.id === id);
+  if (!e) return;
+
+  _reactivatingId = id;
+  showScreen("form");
+
+  document.getElementById("formTitle").textContent = "♻️ Termin reaktivieren";
+  document.getElementById("title").value    = e.title;
+  document.getElementById("desc").value     = e.desc    || "";
+  document.getElementById("location").value = e.location || DEFAULT_LOCATION;
+
+  setEventType(e.allday ? "allday" : "normal");
+  if (e.allday) {
+    const dsEl = document.getElementById("date_start");
+    if (dsEl) dsEl.value = e.date || "";
+    const deEl = document.getElementById("date_end");
+    if (deEl) deEl.value = e.date_end || "";
+  } else {
+    document.getElementById("date").value = e.date || "";
+    setTimeDisplay("start", e.start);
+    setTimeDisplay("end",   e.end);
+  }
+
+  document.getElementById("category").value  = e.category  || "other";
+  document.getElementById("reminder1").value = e.reminder1 || "";
+  document.getElementById("reminder2").value = e.reminder2 || "";
+
+  const importantEl    = document.getElementById("important");
+  const importantLabel = document.getElementById("important-label");
+  importantEl.checked        = !!e.important;
+  importantLabel.textContent = e.important ? "Ja" : "Nein";
+  importantLabel.style.color = e.important ? "#d32f2f" : "#888";
+
+  setActiveCategory("form", e.category);
+}
+
 function resetForm() {
-  editEventIndex = null;
+  editEventIndex  = null;
+  _reactivatingId = null;
   document.getElementById("formTitle").textContent = "➕ Termin";
   setEventType("normal");
   document.getElementById("date").value = "";
