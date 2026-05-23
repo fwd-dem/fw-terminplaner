@@ -55,9 +55,25 @@ function buildMonthSelector() {
     btn.dataset.year  = m.year;
     btn.dataset.month = m.month;
     btn.onclick = () => {
-      selector.querySelectorAll(".allday-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      fillEinladung(m.year, m.month);
+      const freiEl   = document.getElementById("einladung-info-frei");
+      const hinweisEl = document.getElementById("einladung-hinweis");
+      const hatInhalt = (freiEl?.value.trim() || "") || (hinweisEl?.value.trim() || "");
+
+      const doSwitch = () => {
+        selector.querySelectorAll(".allday-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        fillEinladung(m.year, m.month);
+      };
+
+      if (hatInhalt) {
+        showModal({
+          title: "Monat wechseln?",
+          text: "Das Freifeld oder der Hinweis enthält Text, der beim Wechsel verloren geht. Trotzdem wechseln?",
+          onConfirm: doSwitch
+        });
+      } else {
+        doSwitch();
+      }
     };
     selector.appendChild(btn);
   });
