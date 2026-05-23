@@ -212,6 +212,10 @@ function fillEinladung(year, month) {
   const hinweisEl = document.getElementById("einladung-hinweis");
   if (hinweisEl) hinweisEl.value = "";
 
+  // Ort auf Default zurücksetzen
+  const ortEl = document.getElementById("einladung-ort");
+  if (ortEl) ortEl.value = "Feuerwehrgerätehaus (FWGH)";
+
   // ── Geburtstagskinder des Monats ──────────────────────────────
   const gbEl    = document.getElementById("einladung-geburtstag");
   const gbBlock = document.getElementById("einladung-geburtstag-block");
@@ -548,8 +552,9 @@ function buildPDF(doc, FONT, LOGO_FW, LOGO_FFW, measureOnly, icons) {
   });
 
   // ── ORT ───────────────────────────────────────────────────────
+  const ortWert = document.getElementById("einladung-ort")?.value.trim() || "Feuerwehrgerätehaus (FWGH)";
   drawSection("pin", RED, "Ort", () => {
-    addText("Feuerwehrgerätehaus (FWGH)", { indent: 9 });
+    addText(ortWert, { indent: 9 });
   });
 
   // ── WEITERE INFORMATIONEN ─────────────────────────────────────
