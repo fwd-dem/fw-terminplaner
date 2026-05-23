@@ -158,7 +158,8 @@ function fillEinladung(year, month) {
         ta.dataset.eventId = e.id;
         ta.placeholder     = "Thema / Beschreibung…";
         ta.rows            = 2;
-        ta.value           = e.desc ? e.desc.trim() : "";
+        // Ort nicht in Beschreibung übernehmen — er steht in der Ort-Section
+        ta.value           = e.desc ? e.desc.trim().split("\n").filter(l => l.trim() !== (e.location || "").trim()).join("\n").trim() : "";
         ta.style.marginTop = "4px";
         wrapper.appendChild(ta);
 
@@ -198,7 +199,8 @@ function fillEinladung(year, month) {
       ta.dataset.eventId = e.id;
       ta.placeholder     = "Beschreibung…";
       ta.rows            = 2;
-      ta.value           = e.desc ? e.desc.trim() : "";
+      // Ort nicht in Beschreibung übernehmen — er steht in der Ort-Section
+      ta.value           = e.desc ? e.desc.trim().split("\n").filter(l => l.trim() !== (e.location || "").trim()).join("\n").trim() : "";
       wrapper.appendChild(ta);
 
       infoTermineEl.appendChild(wrapper);
